@@ -1,9 +1,9 @@
 # caspo-ts (Caspo Time Series)
-Docker Image: 
-docker pull misbahch6/caspo-ts 
+Docker Image:   
+docker pull misbahch6/caspo-ts   
 
-docker run misbahch6/caspo-ts "command" 
-commands are identify, mse, validate 
+docker run misbahch6/caspo-ts "command"   
+commands are identify, mse, validate   
 
 PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif
 DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv
