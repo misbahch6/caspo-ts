@@ -1,4 +1,8 @@
 # caspo-ts (Caspo Time Series)
+Docker Image:
+docker pull misbahch6/caspo-ts
+docker run misbahch6/caspo-ts
+
 
 In the following, we assume that
 
