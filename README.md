@@ -2,13 +2,14 @@
 Installation:  
 
 1) Docker Image:   
-docker pull misbahch6/caspo-ts   
 
-docker run misbahch6/caspo-ts "command"   
-commands are identify, mse, validate   
+   docker pull misbahch6/caspo-ts   
+   docker run misbahch6/caspo-ts "command"   
+   commands are identify, mse, validate   
 
-2) pip install https://github.com/misbahch6/caspo-ts.git
-This will install necessary dependencies, except the gringo python module and NuSMV.
+2) GitHub
+   pip install https://github.com/misbahch6/caspo-ts.git
+   This will install necessary dependencies, except the gringo python module and NuSMV.
 
 
 Usage:  
