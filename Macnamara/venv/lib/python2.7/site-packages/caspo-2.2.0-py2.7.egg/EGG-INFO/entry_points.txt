@@ -1,0 +1,3 @@
+[console_scripts]
+caspo = caspo.console.main:run
+

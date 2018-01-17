@@ -1,0 +1,16 @@
+ikb	-1	nfkb
+pi3k	1	map3k1
+map3k1	1	p38
+tnfa	1	pi3k
+tnfa	-1	ikb
+tnfa	1	p38
+egf	1	sos
+egf	1	pi3k
+erk	-1	sos
+raf1	1	erk
+raf1	1	creb
+sos	1	map3k1
+sos	1	raf1
+pi3k	-1	gsk3
+map3k1	1	ap1
+tnfa	1	ap1

@@ -1,0 +1,4 @@
+#!/home/user/work/caspots-master/Macnamara/venv/bin/python
+# EASY-INSTALL-SCRIPT: 'numpy==1.12.0','f2py'
+__requires__ = 'numpy==1.12.0'
+__import__('pkg_resources').run_script('numpy==1.12.0', 'f2py')
