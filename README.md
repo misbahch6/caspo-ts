@@ -1,9 +1,17 @@
-# caspo-ts (Caspo Time Series)
-Docker Image:   
+# Caspo-ts (Caspo Time Series)
+Installation:  
+
+1) Docker Image:   
 docker pull misbahch6/caspo-ts   
 
 docker run misbahch6/caspo-ts "command"   
 commands are identify, mse, validate   
+
+2) pip install https://github.com/misbahch6/caspo-ts.git
+This will install necessary dependencies, except the gringo python module and NuSMV.
+
+
+Usage:  
 
 To identify all Boolean Networks, call
 
@@ -13,12 +21,15 @@ By default, the identification will return the subset-minimal BNs. Add --family 
 
 The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal MSE is displayed.
 
-The minimal estimated MSE is obtained with
+To obtain minimal estimated MSE, call
 
 caspots mse PKN.sif DATASET.csv
 
 The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset.
 
+To validate Boolean Networks, call
+
+caspots validate PKN.sif DATASET.csv RESULTS.csv 
 
 PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif
 DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv
