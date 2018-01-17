@@ -32,7 +32,7 @@ Usage:
 
    caspots validate PKN.sif DATASET.csv RESULTS.csv 
 
-PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif
-DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv
-RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.
-python is the python interpreter in version 2.7.X. On some systems, you should use python2.
+PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
+DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
+RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.  
+python is the python interpreter in version 2.7.X. On some systems, you should use python2.  
