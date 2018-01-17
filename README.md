@@ -14,23 +14,23 @@ Installation:
 
 Usage:  
 
-To identify all Boolean Networks, call
+1) To identify all Boolean Networks, call
 
-caspots identify PKN.sif DATASET.csv RESULTS.csv  
+   caspots identify PKN.sif DATASET.csv RESULTS.csv  
 
-By default, the identification will return the subset-minimal BNs. Add --family all to compute all the BNs. Add --family mincard to compute the cardinal-minimal BNs.
+   By default, the identification will return the subset-minimal BNs. Add --family all to compute all the BNs. Add --family      mincard to compute the cardinal-minimal BNs.
 
-The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal MSE is displayed.
+   The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true      positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal    MSE is displayed.
 
-To obtain minimal estimated MSE, call
+2) To obtain minimal estimated MSE, call
 
-caspots mse PKN.sif DATASET.csv
+   caspots mse PKN.sif DATASET.csv
 
-The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset.
+   The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such    a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset.
 
-To validate Boolean Networks, call
+3) To validate Boolean Networks, call
 
-caspots validate PKN.sif DATASET.csv RESULTS.csv 
+   caspots validate PKN.sif DATASET.csv RESULTS.csv 
 
 PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif
 DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv
