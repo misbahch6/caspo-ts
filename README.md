@@ -20,26 +20,29 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ## Usage:  
 Here we show the command format:
 ### 1) Identify all Boolean Networks:
-     * ```python cli.py identify PKN.sif DATASET.csv RESULTS.csv```    
+     ```python cli.py identify PKN.sif DATASET.csv RESULTS.csv```    
      
    Add --family all to compute all the BNs. Add --limit to specify the number of BNs.
    The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true      positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal    MSE is displayed.
 
 ### 2) MSE Calculation:
-     * ```python cli.py mse PKN.sif DATASET.csv```   
+     ```python cli.py mse PKN.sif DATASET.csv```   
      
    The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such    a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset. Add --network to specify the resulting csv file.
 
 ### 3) Validation of Boolean Networks through Model Checker:
-     * ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
+     ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
 
 ## Note:
 * PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
 * DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
 * RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.  
-* python is the python interpreter in version 2.7.X. On some systems, you should use python2.      
-     
-## Example 1 (Artificial Benchmark):
+* python is the python interpreter in version 2.7.X. On some systems, you should use python2.  
+
+##  Example:
+Here we show examples to run the commands using the docker image.
+
+# 1 (Artificial Benchmark):
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
@@ -72,7 +75,7 @@ The following command will model check over-approximated BNs.
 ```
 dataset folder contains the ```Dream 8``` challenge data. 
 
-## Example 2 (Cell Line ```BT549```):
+# 2 (Cell Line ```BT549```):
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
