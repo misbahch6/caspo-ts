@@ -106,6 +106,11 @@ To calculate MSE:
 
 ```caspots mse datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv --networks result.csv```
 
+```
+MSE_discrete = 0.349898336884
+MSE_sample >= 0.349898336884
+```
+
 To model check learned BNs:
 
 ```caspots validate datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv```
