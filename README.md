@@ -62,8 +62,6 @@ The following command will store the set of Boolean Networks in result.csv.
 
 ```caspots identify pkn.sif dataset.csv result.csv```
 
-Output:
-
 ```
 start initial solving
 initial solve took 0.475992202759
