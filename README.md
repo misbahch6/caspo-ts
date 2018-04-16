@@ -72,7 +72,7 @@ The following command will model check over-approximated BNs.
 ```
 54/54 true positives [rate: 100.00%]
 ```
-dataset folder contains the Dream 8 challenge data. 
+dataset folder contains the ```Dream 8``` challenge data. 
 
 ## Example 2:
 If you have installed docker image then start an interactive session by typing:  
