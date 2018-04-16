@@ -83,7 +83,7 @@ If you have installed docker image then start an interactive session by typing:
 
 Please ignore the above commands if you are already in the interactive session.
 
-To idenfify 10 BNs for ```BT549``` Cell line type:
+To idenfify 10 BNs for ```BT549``` Cell line:
 
 ```caspots identify datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv --limit 10```
 
