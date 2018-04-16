@@ -8,7 +8,7 @@
    * commands are identify, mse, validate   
 
 ### 2) Manually through github  
-   * pip install https://github.com/misbahch6/caspo-ts.git  
+   * git clone https://github.com/misbahch6/caspo-ts.git  
    * This will install necessary dependencies, except the caspo, gringo python module and NuSMV.
    * To install caspo please use:
      * conda install -c bioasp caspo
