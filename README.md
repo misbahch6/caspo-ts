@@ -19,7 +19,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ### 1) Identify all Boolean Networks:
    * Using Docker Image:
      * docker run misbahch6/caspo-ts identify PKN.sif DATASET.csv RESULTS.csv   
-   * Using Manual Installation:
+   * Using Manual Installation please run following command from the project's root directory:
      * python cli.py identify PKN.sif DATASET.csv RESULTS.csv    
      
    By default, the identification will return the subset-minimal BNs. Add --family all to compute all the BNs. Add --family      mincard to compute the cardinal-minimal BNs.
@@ -28,7 +28,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ### 2) MSE Calculation:
    * Using Docker Image:
      * docker run misbahch6/caspo-ts mse PKN.sif DATASET.csv
-   * Using Manual Installation:
+   * Using Manual Installation please run following command from the project's root directory:
      * python cli.py mse PKN.sif DATASET.csv   
      
    The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such    a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset.
@@ -36,7 +36,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ### 3) Validation of Boolean Networks through Model Checker:
    * Using Docker Image:
      * docker run misbahch6/caspo-ts validate PKN.sif DATASET.csv RESULTS.csv 
-   * Using Manual Installation:
+   * Using Manual Installation please run following command from the project's root directory:
      * python cli.py validate PKN.sif DATASET.csv RESULTS.csv 
    
 ## Note:
