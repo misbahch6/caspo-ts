@@ -80,11 +80,14 @@ If you have installed docker image then start an interactive session by typing:
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
 
 ```cd /src```
+
 Please ignore the above commands if you are already in the interactive session.
 
-To idenfify BNs for BT549 Cell line type:
+To idenfify 10 BNs for BT549 Cell line type:
+
 ```caspots identify datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv --limit 10```
 
+The argument --limit can be used to specify the number of BNs.
 
 ## Note:
 * PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
