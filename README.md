@@ -11,6 +11,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
    * This will install necessary dependencies, except the caspo, gringo python module and NuSMV.
    * To install caspo please use:
      * ```conda install -c bioasp caspo```
+        * To install anaconda please follow this link: https://docs.anaconda.com/anaconda/install/
    * To install gringo python module please use:
      * ```conda install -c potassco clingo=4.5.4```
    * To install NuSMV please compile the sources or put the binaries in your /usr/local/bin
