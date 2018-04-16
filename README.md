@@ -6,7 +6,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
    * docker pull misbahch6/caspo-ts   
      * To install Docker please follow this link: https://docs.docker.com/install/
 
-### 2) Manually through github  
+### 2) Manually  
    * git clone https://github.com/misbahch6/caspo-ts.git  
    * This will install necessary dependencies, except the caspo, gringo python module and NuSMV.
    * To install caspo please use:
