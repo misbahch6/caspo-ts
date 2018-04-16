@@ -17,7 +17,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
    * To install NuSMV please compile the sources or put the binaries in your /usr/local/bin
      * http://nusmv.fbk.eu
 
-## Usage:  
+## Format of Commands:  
 
 Here we show fromat of the commands used by the caspo-ts.
 
@@ -44,15 +44,19 @@ Here we show fromat of the commands used by the caspo-ts.
 * DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
 * RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.  
 * python is the python interpreter in version 2.7.X. On some systems, you should use python2. 
-* Datasets folder contains the DREAM 8 Challenge dataset.
+* Datasets folder contains the ```DREAM 8``` Challenge dataset.
 
-## Example 1:
+## Usage 
+
+Here we show two examples of caspots. One is with artifical dataset and the other is with one cell line of ```DREAM 8``` challenge.
 
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
 
 ```cd /src```
+
+## Example 1:
 
 The following command will store the set of Boolean Networks in result.csv.
 
@@ -80,14 +84,6 @@ The following command will model check over-approximated BNs.
 ```
 
 ## Example 2:
-
-If you have installed docker image then start an interactive session by typing:  
-
-```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
-
-```cd /src```
-
-Please ignore the above commands if you are already in the interactive session.
 
 To idenfify 10 BNs for ```BT549``` Cell line:
 
