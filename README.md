@@ -113,3 +113,7 @@ MSE_sample >= 0.349898336884
 To model check learned BNs:
 
 ```caspots validate datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv```
+
+```
+6/10 true positives [rate: 60.00%]
+```
