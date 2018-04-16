@@ -41,7 +41,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
      * ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
      
 ## Example:
-* The following command will store the set of Boolean Networks in result.csv. 
+The following command will store the set of Boolean Networks in result.csv. 
 * ```docker run misbahch6/caspo-timeseries identify /usr/local/pkn.sif /usr/local/dataset.csv usr/local/result.csv```
 ```
 start initial solving
@@ -51,14 +51,17 @@ begin enumeration
 enumeration took 0.477589845657
 54 solution(s) for the over-approximation
 ```
-* The following command will display minimum mse. 
+The following command will display minimum mse. 
 * ```sudo docker run -it misbahch6/caspo-timeseries mse /usr/local/pkn.sif /usr/local/dataset.csv```
 ```
 MSE_discrete = 0.155167584136
 MSE_sample >= 0.155167584136
 ```
-
-* 
+The following command will model check over-approximated BNs.
+* ```sudo docker run -it misbahch6/caspo-timeseries validate /usr/local/pkn.sif /usr/local/dataset.csv usr/local/result.csv```
+```
+54/54 true positives [rate: 100.00%]
+```
 ## Note:
 * PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
 * DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
