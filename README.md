@@ -19,9 +19,9 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ## Usage:  
 ### 1) Identify all Boolean Networks:
    * Using Docker Image:
-     * docker run misbahch6/caspo-timeseries identify PKN.sif DATASET.csv RESULTS.csv   
+     * ```docker run misbahch6/caspo-timeseries identify PKN.sif DATASET.csv RESULTS.csv```   
    * Using Manual Installation please run following command from the project's root directory:
-     * python cli.py identify PKN.sif DATASET.csv RESULTS.csv    
+     * ```python cli.py identify PKN.sif DATASET.csv RESULTS.csv```    
      
    By default, the identification will return the subset-minimal BNs. Add --family all to compute all the BNs. Add --family      mincard to compute the cardinal-minimal BNs.
    The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true      positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal    MSE is displayed.
@@ -30,19 +30,19 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
    * Using Docker Image:
      * ``` docker run misbahch6/caspo-timeseries mse PKN.sif DATASET.csv ```
    * Using Manual Installation please run following command from the project's root directory:
-     * python cli.py mse PKN.sif DATASET.csv   
+     * ```python cli.py mse PKN.sif DATASET.csv```   
      
    The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such    a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset.
 
 ### 3) Validation of Boolean Networks through Model Checker:
    * Using Docker Image:
-     * docker run misbahch6/caspo-timeseries validate PKN.sif DATASET.csv RESULTS.csv 
+     * ```docker run misbahch6/caspo-timeseries validate PKN.sif DATASET.csv RESULTS.csv``` 
    * Using Manual Installation please run following command from the project's root directory:
-     * python cli.py validate PKN.sif DATASET.csv RESULTS.csv 
+     * ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
      
 ## Example:
 The following command will store the set of Boolean Networks in result.csv. 
-* docker run misbahch6/caspo-timeseries identify /usr/local/pkn.sif /usr/local/dataset.csv usr/local/result.csv
+* ```docker run misbahch6/caspo-timeseries identify /usr/local/pkn.sif /usr/local/dataset.csv usr/local/result.csv```
 ```
 start initial solving
 initial solve took 0.475992202759
