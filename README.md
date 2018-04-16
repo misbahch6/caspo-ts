@@ -98,7 +98,6 @@ To idenfify 10 BNs for ```BT549``` Cell line:
 # begin enumeration
 # enumeration took 12.5855491161
 10 solution(s) for the over-approximation
-
 ```
 
 The argument --limit can be used to specify the number of BNs.
