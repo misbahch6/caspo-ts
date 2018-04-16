@@ -19,7 +19,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ## Usage:  
 ### 1) Identify all Boolean Networks:
    * Using Docker Image:
-     * docker run misbahch6/caspo-ts identify PKN.sif DATASET.csv RESULTS.csv   
+     * docker run misbahch6/caspo-timeseries identify PKN.sif DATASET.csv RESULTS.csv   
    * Using Manual Installation please run following command from the project's root directory:
      * python cli.py identify PKN.sif DATASET.csv RESULTS.csv    
      
@@ -28,7 +28,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 
 ### 2) MSE Calculation:
    * Using Docker Image:
-     * docker run misbahch6/caspo-ts mse PKN.sif DATASET.csv
+     * docker run misbahch6/caspo-timeseries mse PKN.sif DATASET.csv
    * Using Manual Installation please run following command from the project's root directory:
      * python cli.py mse PKN.sif DATASET.csv   
      
