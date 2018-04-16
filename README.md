@@ -3,20 +3,20 @@
 
 ### 1) Docker Image:   
 
-   docker pull misbahch6/caspo-ts   
-   docker run misbahch6/caspo-ts "command"   
-   commands are identify, mse, validate   
+   * docker pull misbahch6/caspo-ts   
+   * docker run misbahch6/caspo-ts "command"   
+   * commands are identify, mse, validate   
 
 ### 2) Manually through github  
-   pip install https://github.com/misbahch6/caspo-ts.git  
-   This will install necessary dependencies, except the gringo python module and NuSMV.
+   * pip install https://github.com/misbahch6/caspo-ts.git  
+   * This will install necessary dependencies, except the gringo python module and NuSMV.
 
 
 ## Usage:  
 
 ### 1) To identify all Boolean Networks, call
 
-   caspots identify PKN.sif DATASET.csv RESULTS.csv  
+   * caspots identify PKN.sif DATASET.csv RESULTS.csv  
 
    By default, the identification will return the subset-minimal BNs. Add --family all to compute all the BNs. Add --family      mincard to compute the cardinal-minimal BNs.
 
@@ -24,17 +24,17 @@
 
 ### 2) To obtain minimal estimated MSE, call
 
-   caspots mse PKN.sif DATASET.csv
+   * caspots mse PKN.sif DATASET.csv
 
    The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such    a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset.
 
 ### 3) To validate Boolean Networks, call
 
-   caspots validate PKN.sif DATASET.csv RESULTS.csv 
+   * caspots validate PKN.sif DATASET.csv RESULTS.csv 
 
-PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
-DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
-RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.  
-python is the python interpreter in version 2.7.X. On some systems, you should use python2.  
+* PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
+* DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
+* RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.  
+* python is the python interpreter in version 2.7.X. On some systems, you should use python2.  
 
-Dataset folder contain the Dream 8 challenge data. 
+* Dataset folder contain the Dream 8 challenge data. 
