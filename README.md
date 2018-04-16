@@ -48,7 +48,7 @@ Here we show fromat of the commands used by the caspo-ts.
 
 Here we show examples to run the commands using the docker image.
 
-# 1 (Artificial Benchmark):
+### 1 (Artificial Benchmark):
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
@@ -81,7 +81,7 @@ The following command will model check over-approximated BNs.
 ```
 dataset folder contains the ```Dream 8``` challenge data. 
 
-# 2 (Cell Line ```BT549```):
+### 2 (Cell Line ```BT549```):
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
