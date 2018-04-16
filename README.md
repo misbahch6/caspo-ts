@@ -48,7 +48,7 @@ Here we show fromat of the commands used by the caspo-ts.
 
 ## Usage 
 
-Here we show two examples of caspots. One is with artifical dataset and the other is with one cell line of ```DREAM 8``` challenge.
+Here we show two examples: One is with artifical dataset and the other is with ```DREAM 8``` challenge data.
 
 If you have installed docker image then start an interactive session by typing:  
 
