@@ -19,7 +19,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 
 ## Format of Commands:  
 
-Here we show fromat of the commands used by the caspo-ts.
+Here we show the fromat of commands used by the caspo-ts.
 
 ### 1) Identify all Boolean Networks:
  
