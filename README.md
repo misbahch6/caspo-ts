@@ -36,7 +36,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 
 ### 3) Validation of Boolean Networks through Model Checker:
    * Using Docker Image:
-     * docker run misbahch6/caspo-ts validate PKN.sif DATASET.csv RESULTS.csv 
+     * docker run misbahch6/caspo-timeseries validate PKN.sif DATASET.csv RESULTS.csv 
    * Using Manual Installation please run following command from the project's root directory:
      * python cli.py validate PKN.sif DATASET.csv RESULTS.csv 
      
