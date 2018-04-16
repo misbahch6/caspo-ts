@@ -89,6 +89,15 @@ To idenfify 10 BNs for ```BT549``` Cell line:
 
 The argument --limit can be used to specify the number of BNs.
 
+To calculate MSE:
+
+```caspots mse datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv --networks result.csv```
+
+To model check learned BNs:
+
+```caspots validate datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv```
+
+
 ## Note:
 * PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
 * DATASET.csv is the MIDAS description of the multiplex dataset, e.g., benchmarks/1/dataset1_cmpr_bn_1.csv  
