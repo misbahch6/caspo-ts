@@ -25,7 +25,7 @@ Here we show fromat of the commands used by the caspo-ts.
  
  ```python cli.py identify PKN.sif DATASET.csv RESULTS.csv```    
      
-   Add --family all to compute all the BNs. Add --limit to specify the number of BNs.
+   The option --family all to compute all the BNs. The option --limit to specify the number of BNs.
    The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true      positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal    MSE is displayed.
 
 ### 2) MSE Calculation:
