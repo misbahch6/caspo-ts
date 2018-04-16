@@ -3,7 +3,7 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 
 ## Installation:  
 ### 1) Docker Image   
-   * docker pull misbahch6/caspo-ts   
+   * docker pull misbahch6/caspo-timeseries  
      * To install Docker please follow this link: https://docs.docker.com/install/
 
 ### 2) Manually  
