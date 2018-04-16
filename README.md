@@ -9,7 +9,9 @@
 
 ### 2) Manually through github  
    * pip install https://github.com/misbahch6/caspo-ts.git  
-   * This will install necessary dependencies, except the gringo python module and NuSMV.
+   * This will install necessary dependencies, except the caspo, gringo python module and NuSMV.
+   * To install caspo please use:
+     * conda install -c bioasp caspo
    * To install gringo python module please use:
      * conda install -c potassco clingo=4.5.4
    * To install NuSMV please compile the sources or put the binaries in your /usr/local/bin
