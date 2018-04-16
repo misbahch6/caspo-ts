@@ -1,6 +1,6 @@
 # Caspo-ts (Caspo Time Series)
-## Installation:  
 
+## Installation:  
 ### 1) Docker Image:   
 
    * docker pull misbahch6/caspo-ts   
