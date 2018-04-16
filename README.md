@@ -18,7 +18,9 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
      * http://nusmv.fbk.eu
 
 ## Usage:  
-Here we show the command format:
+
+Here we show fromat of the commands used by the caspo-ts.
+
 ### 1) Identify all Boolean Networks:
      ```python cli.py identify PKN.sif DATASET.csv RESULTS.csv```    
      
@@ -40,6 +42,7 @@ Here we show the command format:
 * python is the python interpreter in version 2.7.X. On some systems, you should use python2.  
 
 ##  Example:
+
 Here we show examples to run the commands using the docker image.
 
 # 1 (Artificial Benchmark):
