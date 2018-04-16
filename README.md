@@ -1,7 +1,7 @@
 # Caspo-ts (Caspo Time Series)
 
 ## Installation:  
-### 1) Docker Image:   
+### 1) Docker Image   
 
    * docker pull misbahch6/caspo-ts   
    * docker run misbahch6/caspo-ts "command"   
@@ -10,6 +10,11 @@
 ### 2) Manually through github  
    * pip install https://github.com/misbahch6/caspo-ts.git  
    * This will install necessary dependencies, except the gringo python module and NuSMV.
+   * To install gringo python module please use:
+     * conda install -c potassco clingo=4.5.4
+   * To install NuSMV please compile the sources or put the binaries in your /usr/local/bin
+     * http://nusmv.fbk.eu
+   
 
 
 ## Usage:  
