@@ -42,8 +42,10 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
      * ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
      
 ## Example:
-If you are using docker image then type: 
+If you are using docker image then type:  
+
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
+
 ```cd /src```
 
 The following command will store the set of Boolean Networks in result.csv.
