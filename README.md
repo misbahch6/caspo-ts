@@ -44,11 +44,8 @@ Here we show fromat of the commands used by the caspo-ts.
 * RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by our python scripts.  
 * python is the python interpreter in version 2.7.X. On some systems, you should use python2.  
 
-##  Example:
+## Example 1:
 
-Here we show examples to run the commands using the docker image.
-
-### 1 (Artificial Benchmark):
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
@@ -79,9 +76,9 @@ The following command will model check over-approximated BNs.
 ```
 54/54 true positives [rate: 100.00%]
 ```
-dataset folder contains the ```Dream 8``` challenge data. 
 
-### 2 (Cell Line ```BT549```):
+## Example 2:
+
 If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
@@ -93,6 +90,16 @@ Please ignore the above commands if you are already in the interactive session.
 To idenfify 10 BNs for ```BT549``` Cell line:
 
 ```caspots identify datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv --limit 10```
+
+```
+# start initial solving
+# initial solve took 865.829895973
+# optimizations = [0]
+# begin enumeration
+# enumeration took 12.5855491161
+10 solution(s) for the over-approximation
+
+```
 
 The argument --limit can be used to specify the number of BNs.
 
