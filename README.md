@@ -2,10 +2,7 @@
 
 ## Installation:  
 ### 1) Docker Image   
-
    * docker pull misbahch6/caspo-ts   
-   * docker run misbahch6/caspo-ts "command"   
-   * commands are identify, mse, validate   
 
 ### 2) Manually through github  
    * git clone https://github.com/misbahch6/caspo-ts.git  
@@ -18,9 +15,7 @@
      * http://nusmv.fbk.eu
    
 
-
 ## Usage:  
-
 ### 1) To identify all Boolean Networks, call
 
    * caspots identify PKN.sif DATASET.csv RESULTS.csv  
