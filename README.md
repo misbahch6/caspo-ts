@@ -41,8 +41,8 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
    * Using Manual Installation please run following command from the project's root directory:
      * ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
      
-## Example:
-If you are using docker image then type:  
+## Example 1:
+If you have installed docker image then start an interactive session by typing:  
 
 ```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
 
@@ -73,6 +73,17 @@ The following command will model check over-approximated BNs.
 54/54 true positives [rate: 100.00%]
 ```
 ```dataset``` folder contain the Dream 8 challenge data. 
+
+## Example 2:
+If you have installed docker image then start an interactive session by typing:  
+
+```docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries``` 
+
+```cd /src```
+Please ignore the above commands if you are already in the interactive session.
+
+To idenfify BNs for BT549 Cell line type:
+```caspots identify datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv --limit 10```
 
 
 ## Note:
