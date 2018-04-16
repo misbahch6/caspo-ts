@@ -39,16 +39,18 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
      * docker run misbahch6/caspo-ts validate PKN.sif DATASET.csv RESULTS.csv 
    * Using Manual Installation please run following command from the project's root directory:
      * python cli.py validate PKN.sif DATASET.csv RESULTS.csv 
+     
 ## Example:
 The following command will store the set of Boolean Networks in result.csv. 
 * docker run misbahch6/caspo-timeseries identify /usr/local/pkn.sif /usr/local/dataset.csv usr/local/result.csv
-# start initial solving
-# initial solve took 0.475992202759
-# optimizations = [0]
-# begin enumeration
-# enumeration took 0.477589845657
+```
+start initial solving
+initial solve took 0.475992202759
+optimizations = [0]
+begin enumeration
+enumeration took 0.477589845657
 54 solution(s) for the over-approximation
-
+```
    
 ## Note:
 * PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.: benchmarks/1/pkn1_cmpr.sif  
