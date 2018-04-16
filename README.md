@@ -1,4 +1,5 @@
 # Caspo-ts (Caspo Time Series)
+Caspo-ts is a software to infer Boolean Networks from prior knowledge network and phosphoproteomic time series data. This software is based on Answer Set Programming and Model Checking. 
 
 ## Installation:  
 ### 1) Docker Image   
