@@ -18,21 +18,19 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
      * http://nusmv.fbk.eu
 
 ## Usage:  
+Here we show the command format:
 ### 1) Identify all Boolean Networks:
-   * Run following command from the project's root directory:
      * ```python cli.py identify PKN.sif DATASET.csv RESULTS.csv```    
      
    Add --family all to compute all the BNs. Add --limit to specify the number of BNs.
    The option --true-positives invokes a model-checker (NuSMV) to ensure that only true positive BNs are returned. The true      positive rate is then displayed. If the PKN is not compatible with the data, the estimated difference of MSE with minimal    MSE is displayed.
 
 ### 2) MSE Calculation:
-   * Run following command from the project's root directory:
      * ```python cli.py mse PKN.sif DATASET.csv```   
      
    The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN and a trace with the estimated MSE: in such    a case, the displayed MSE is the actual minimal MSE of the PKN with respect to the dataset. Add --network to specify the resulting csv file.
 
 ### 3) Validation of Boolean Networks through Model Checker:
-   * Run following command from the project's root directory:
      * ```python cli.py validate PKN.sif DATASET.csv RESULTS.csv``` 
 
 ## Note:
