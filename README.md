@@ -120,11 +120,11 @@ To model check learned BNs:
 ```
 
 ## FAQs
-How to quit docker?
+### How to quit docker?
 
 ```exit```
 
-How to copy file from docker container to local machine?
+### How to copy file from docker container to local machine?
 
 ```docker cp CONTAINER:SRC_PATH DEST_PATH``` 
 
