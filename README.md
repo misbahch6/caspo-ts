@@ -58,7 +58,7 @@ If you have installed docker image then start an interactive session by typing:
 
 ```cd /src```
 
-## Example 1:
+### Example 1:
 
 The following command will store the set of Boolean Networks in result.csv.
 
@@ -85,7 +85,7 @@ The following command will model check over-approximated BNs.
 ```
 54/54 true positives [rate: 100.00%]
 ```
-## Example 2:
+### Example 2:
 
 To idenfify 10 BNs for ```BT549``` Cell line:
 
@@ -118,3 +118,9 @@ To model check learned BNs:
 ```
 6/10 true positives [rate: 60.00%]
 ```
+
+## FAQs
+### 1) How to quit docker?
+    ```exit```
+### 1) How to copy file from docker container to local machine?
+    ```docker cp [OPTIONS] CONTAINER:SRC_PATH DEST_PATH|-``` 
