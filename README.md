@@ -127,7 +127,7 @@ it will display the message `# start initial solving`.
 
 To calculate the MSE:
 
-    docker # caspots mse datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv --networks result.csv```
+    docker # caspots mse datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv --networks result.csv
 
     MSE_discrete = 0.349898336884
     MSE_sample >= 0.349898336884
