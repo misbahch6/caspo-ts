@@ -132,8 +132,9 @@ For example you want to copy ```result.csv```,  open another terminal and type:
 
 ```docker ps```
 
-It will give the ```CONTAINER ID``` of the running docker image, then type
+It will give the ```CONTAINER ID``` of the running docker image, then type:
 
 ```docker cp CONTAINER-ID:src/result.csv /usr/local```
 
+It will copy the file in the local directory.
 
