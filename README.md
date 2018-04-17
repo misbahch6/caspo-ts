@@ -126,5 +126,14 @@ How to quit docker?
 
 How to copy file from docker container to local machine?
 
-```docker cp [OPTIONS] CONTAINER:SRC_PATH DEST_PATH|-``` 
+```docker cp CONTAINER:SRC_PATH DEST_PATH``` 
+
+For example you want to copy ```result.csv```,  open another terminal and type:
+
+```docker ps```
+
+It will give the ```CONTAINER ID``` of the running docker image, then type
+
+```docker cp CONTAINER-ID:src/result.csv /usr/local```
+
 
