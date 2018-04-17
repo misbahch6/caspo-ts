@@ -100,7 +100,7 @@ To idenfify 10 BNs for ```BT549``` Cell line:
 10 solution(s) for the over-approximation
 ```
 
-Note that it may take few minutes (~ 10 to 13 min for Docker Image running on Linux Machine) to setup the files before starting to enumerate solutions. 
+Note that it may take few minutes (~ 10 to 13 min for Docker Image running on Linux Machine) to setup the files before starting to enumerate solutions. When it will start solving, it will display the message ```# start initial solving```.
 
 To calculate MSE:
 
