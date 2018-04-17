@@ -4,11 +4,11 @@ Caspo-ts is a software to infer Boolean Networks from prior knowledge network an
 ## Installation:  
 There are two alternative ways to install caspo-ts. 
 
-### 1) Docker Image   
+### 1) Docker Image:   
    * ```docker pull misbahch6/caspo-timeseries```  
      * To install Docker please follow this link: https://docs.docker.com/install/
 
-### 2) Manually  
+### 2) Manually:  
    * ```git clone https://github.com/misbahch6/caspo-ts.git```  
    * This will install necessary dependencies, except the caspo, gringo python module and NuSMV.
    * To install caspo please use:
@@ -48,7 +48,7 @@ Here we show the fromat of commands used by the caspo-ts.
 * python is the python interpreter in version 2.7.X. On some systems, you should use python2. 
 * Datasets folder contains the ```DREAM 8``` Challenge dataset.
 
-## Usage 
+## Usage:
 
 Here we show two examples: One is with artifical dataset and the other is with ```DREAM 8``` challenge data.
 
@@ -119,7 +119,7 @@ To model check learned BNs:
 6/10 true positives [rate: 60.00%]
 ```
 
-## FAQs
+## FAQs:
 ### How to quit docker?
 
 ```exit```
