@@ -83,7 +83,6 @@ The following command will model check over-approximated BNs.
 ```
 54/54 true positives [rate: 100.00%]
 ```
-
 ## Example 2:
 
 To idenfify 10 BNs for ```BT549``` Cell line:
