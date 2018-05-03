@@ -75,7 +75,7 @@ challenge data.
 
 If you have installed docker image then start an interactive session by typing:
 
-    host $ docker run -ti --entrypoint /bin/bash misbahch6/caspo-timeseries
+    host $ docker run -ti --entrypoint /bin/bash misbahch6/caspots-m
     docker # cd /src
 
 With `host $` we prefix commands that should be executed on the host system and
