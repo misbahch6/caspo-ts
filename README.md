@@ -121,7 +121,7 @@ To idenfify 10 BNs for the `BT549` cell line:
     # enumeration took 12.5855491161
     10 solution(s) for the over-approximation
 
-Note that it may take few minutes (about 15 min depending on the machine) to
+Note that it may take few minutes (about 10 min depending on the machine) to
 setup files before starting to enumerate solutions. When it will start solving,
 it will display the message `# start initial solving`.
 
