@@ -13,7 +13,7 @@ There are two alternative ways to install caspo-ts.
   * To install Docker, please follow this link:
     * <https://docs.docker.com/install/>
   * A container with the caspots system can then be installed with:
-    * `docker pull misbahch6/caspo-timeseries`
+    * `docker pull misbahch6/caspots-m`
 
 ### 2) Manually
 
