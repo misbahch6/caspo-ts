@@ -1,159 +1,79 @@
-# Caspo-ts (Caspo Time Series)
+# Caspots - Boolean network inference from time series data with perturbations
 
-Caspo-ts is a software to infer Boolean Networks from prior knowledge networks
-and phosphoproteomic time series data. This software is based on Answer Set
-Programming and Model Checking.
+## Requirements
+
+- python 2.7
+- caspo (pip install caspo)
+- gringo python module (shipped with gringo from http://potassco.sourceforge.net)
+  On Ubuntu, install the gringo package.
+- NuSMV >= 2.5 - http://nusmv.fbk.eu/NuSMV/download/getting-v2.html
 
 ## Installation
 
-There are two alternative ways to install caspo-ts.
+	pip install https://github.com/pauleve/caspots/archive/master.zip
 
-### 1) Docker Image
+This will install necessary dependencies, except the gringo python module and
+NuSMV.
 
-  * To install Docker, please follow this link:
-    * <https://docs.docker.com/install/>
-  * A container with the caspots system can then be installed with:
-    * `docker pull misbahch6/caspots-m`
+A docker image is also available
 
-### 2) Manually
+	docker pull pauleve/caspots
 
-  * To get caspots (without dependencies):
-    * `git clone https://github.com/misbahch6/caspo-ts.git`
-  * To install anaconda please follow this link:
-    * <https://docs.anaconda.com/anaconda/install/>
-  * To install caspo please use:
-    * `conda install -c bioasp caspo`
-  * To install gringo python module please use:
-    * `conda install -c potassco clingo=4.5.4`
-  * To install NuSMV, please compile the sources and put the binaries in
-    `/usr/local/bin`:
-    * <http://nusmv.fbk.eu>
+### Docker usage
 
-## Available Commands
+The entry point of the docker image is the program `caspots`.
+Hence you can run a image directly with `docker run`.
+You can create an alias to use `caspots` command:
 
-Here we show the available commands offered by the caspo-ts system. If manually
-installed caspots from source run it with `python cli.py`. In the docker image
-the command `caspots` is available instead.
+	alias caspots='docker run --rm --volume "$PWD":/wd --workdir /wd pauleve/caspots'
 
-### 1) Identify all Boolean Networks
+If you have multiple `caspots` command to run in the same directoy, it is
+recommended to first create a container and then execute caspots commands in it.
 
-    python cli.py identify PKN.sif DATASET.csv RESULTS.csv
+	alias start-caspots='docker create --name caspots -it --volume "$PWD":/wd --workdir /wd --entrypoint=/bin/bash pauleve/caspots && docker start caspots'
+	alias docker-caspots='docker exec caspots caspots'
+	alias stop-caspots='docker stop caspots && docker rm caspots'
 
-This command calculates all BNs for a given prior knowledge network and time
-series data. To limit the number of BNs, option `--limit n` can be used.
+First type `start-caspots`, then use as many as `docker-caspots` calls you want.
+Do not forget to call `stop-caspots` when the work is done.
 
-### 2) Minimum Square Error (MSE) Calculation
-
-    python cli.py mse PKN.sif DATASET.csv
-
-Option `--networks file` to specify the csv file containing the BNs to
-calculate the MSE for.
-
-### 3) Validation of Boolean Networks through Model Checking
-
-    python cli.py validate PKN.sif DATASET.csv RESULTS.csv
-
-This command invokes a model-checker (NuSMV) to calculate true positive BNs.
-The true positive rate is then displayed.
-
-### Notes
-
-  * `PKN.sif` is the SIF description of the PKN delimiting the domain of the
-    BNs, e.g.: `benchmarks/1/pkn1_cmpr.sif`
-  * `DATASET.csv` is the MIDAS description of the multiplex dataset, e.g.,
-    `benchmarks/1/dataset1_cmpr_bn_1.csv`
-  * `RESULTS.csv` is a CSV description of a set of Boolean Networks, as
-    outputted by our python scripts.
-  * `python` is the python interpreter in version 2.7.X. On some systems, you
-    should use `python2`.
-  * The `datasets` folder contains the `DREAM 8` Challenge dataset.
 
 ## Usage
 
-Here we show two examples: one with artifical data and another with `DREAM 8`
-challenge data.
+In the following, we assume that
+* PKN.sif is the SIF description of the PKN delimiting the domain of BNs, e.g.:
+    benchmarks/1/pkn1_cmpr.sif
+* DATASET.csv is the MIDAS description of the multiplex dataset, e.g.,
+    benchmarks/1/dataset1_cmpr_bn_1.csv
+* RESULTS.csv is a CSV description of a set of Boolean Networks, as outputted by
+  our python scripts.
+* python is the python interpreter in version 2.7.X. On some systems, you should
+  use python2.
 
-If you have installed docker image then start an interactive session by typing:
 
-    host $ docker run -ti --entrypoint /bin/bash misbahch6/caspots-m
-    docker # cd /src
+To identify all Boolean Networks, call
 
-With `host $` we prefix commands that should be executed on the host system and
-with `docker #` commands that should be executed in the docker container.
+	caspots identify PKN.sif DATASET.csv RESULTS.csv
 
-### Example 1
+By default, the identification will return the subset-minimal BNs.
+Add --family all to compute _all_ the BNs.
+Add --family mincard to compute the cardinal-minimal BNs.
 
-The following command will store the set of Boolean Networks in `result.csv`:
+The option --true-positives invokes a model-checker (NuSMV) to ensure that only true
+positive BNs are returned. The true positive rate is then displayed.
+If the PKN is not compatible with the data, the estimated difference of MSE with
+minimal MSE is displayed.
 
-    docker # caspots identify pkn.sif dataset.csv result.csv
+The minimal estimated MSE is obtained with
 
-    start initial solving
-    initial solve took 0.475992202759
-    optimizations = [0]
-    begin enumeration
-    enumeration took 0.477589845657
-    54 solution(s) for the over-approximation
+	caspots mse PKN.sif DATASET.csv
 
-The following command will display the minimum mse:
+The option --check-exacts invokes a model-checker (NuSMV) until it finds a BN
+and a trace with the estimated MSE: in such a case, the displayed MSE is the
+actual minimal MSE of the PKN with respect to the dataset.
 
-    docker # caspots mse pkn.sif dataset.csv --networks result.csv
-
-    MSE_discrete = 0.155167584136
-    MSE_sample >= 0.155167584136
-
-The following command will model check the over-approximated BNs obtained by
-the first call:
-
-    docker # caspots validate  pkn.sif dataset.csv result.csv
-
-    54/54 true positives [rate: 100.00%]
-
-### Example 2
-
-To idenfify 10 BNs for the `BT549` cell line:
-
-    docker # caspots identify datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv --limit 10
-
-    # start initial solving
-    # initial solve took 865.829895973
-    # optimizations = [0]
-    # begin enumeration
-    # enumeration took 12.5855491161
-    10 solution(s) for the over-approximation
-
-Note that it may take few minutes (about 10 min depending on the machine) to
-setup files before starting to enumerate solutions. When it will start solving,
-it will display the message `# start initial solving`.
-
-To calculate the MSE:
-
-    docker # caspots mse datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv --networks result.csv
-
-    MSE_discrete = 0.349898336884
-    MSE_sample >= 0.349898336884
-
-To model check the learned BNs:
-
-    docker # caspots validate datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv
-
-    6/10 true positives [rate: 60.00%]
-
-## FAQ
-
-### How to quit docker?
-
-    docker # exit
-
-### How to copy file from docker container to local machine?
-
-    host $ docker cp CONTAINER-ID:SRC_PATH DEST_PATH
-
-For example if you want to copy `result.csv`, open another terminal and type:
-
-    host $ docker ps
-
-This will print the `CONTAINER-ID` of the running docker image, then type:
-
-    host $ docker cp CONTAINER-ID:src/result.csv .
-
-This will copy the file in the current directory.
+#### Authors
+- Max Ostrowski
+- Loïc Paulevé
+- Anne Siegel
+- Carito Guziolowski

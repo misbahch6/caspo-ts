@@ -4,18 +4,23 @@ from __future__ import print_function
 import os
 import sys
 import tempfile
+import time
+#import gringo
+import clingo
 
-import gringo
+from .graph import Graph
+from .hypergraph import HyperGraph
+from .logicalnetwork import LogicalNetwork, LogicalNetworkList
 
-from caspo.core import Graph, HyperGraph, LogicalNetwork, LogicalNetworkList
+#import logicalnetworklist as LogicalNetworkList
 
 from .networks import *
 from .utils import *
 from .asputils import *
 from .dataset import *
 from caspots import identify
+from crossvar import globalvariables
 from caspots import modelchecking
-
 
 def read_pkn(args):
     graph = Graph.read_sif(args.pkn)
@@ -45,6 +50,7 @@ def read_domain(args, hypergraph, dataset, outf):
         networks = read_networks(args)
         out = domain_of_networks(networks, hypergraph, dataset)
         with open(outf, "w") as fd:
+	    #print("%s\n" %out)
             fd.write(out)
         return outf
     else:
@@ -54,7 +60,8 @@ def is_true_positive(args, dataset, network):
     fd, smvfile = tempfile.mkstemp(".smv")
     os.close(fd)
     exact = modelchecking.verify(dataset, network, smvfile, args.semantics)
-    if args.debug:
+    #print(globalvariables.contraintonexp, "\n")
+    if args.debug: #misbah
         dbg("# %s" % smvfile)
     else:
         os.unlink(smvfile)
@@ -142,20 +149,101 @@ def do_identify(args):
 
 
     def on_model(model):
+        globalvariables.numberofsol = args.limit 
+        globalvariables.check = False
+	#file = open("checkmodels.txt","w")
         c["found"] += 1
+	mcounter = 1
         skip = False
-        tuples = (f.args() for f in model.atoms() if f.name() == "dnf")
+	#print(model.cost)
+	#print(model.symbols(atoms=True))
+	#for f in model.symbols(atoms=True):
+	#    if f.name == "dnf" and len(f.arguments) == 2:
+	#	print(f)
+	#for f in model.symbols(atoms=True): 
+	    #if f.name == "supp":
+	        #print(f)
+	#print(model.symbols(shown=True))
+	#print(model, model.optimality_proven, model.cost)
+        tuples = ([x.number for x in f.arguments] for f in model.symbols(shown=True) if f.name == "dnf")
         network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
+	#print(dir(model))	
+	#print(dir(model.symbols(atoms=True)))
+
+	#for item in network:
+	    #print("%s,"%item)
         if args.true_positives:
             if is_true_positive(args, dataset, network):
-                c["tp"] += 1
+                globalvariables.check = True
+                c["tp"] += 1 
+		'''############# -------------Misbah------------------
+
+	    	for exp in dataset.experiments.values():
+		    if exp.id == globalvariables.contraintonexp:
+			dvars = dataset.setup.nodes.union(network.variables())
+			varying_nodes = set([node for node, _ in network.formulas_iter()])
+			clampable = varying_nodes.intersection(dataset.inhibitors.union(dataset.stimulus))
+			#print(dvars)
+			#print(clampable)		
+		    	for t, values in exp.obs.items():
+            	    	    for n, v in values.items():
+				#print(n, v)
+				    #print("%d, %d, %s, %s" % (exp.id, t, n, "0" if not v else "1"))
+				print([(clingo.Function("supp",[exp.id,t,n,not v]), True)])
+				model.context.add_nogood([(clingo.Function("supp",[globalvariables.contraintonexp,t,n, not v]), True)])
+	############# ------------- Misbah--------------------'''
             else:
                 skip = True
         show_stats()
         if skip:
             return
         networks.append(network)
+	#print(globalvariables.contraintonexp)
+	'''
+        if skip and args.RC:
+	    crossvar.myflag=True
+	    forcommaordot = len(model.symbols(shown=True))
+	    count=0
+	    for item in model.symbols(shown=True):
+		crossvar.FO = crossvar.FO +" "+ str(item)
+		count = count+1
+		if count < forcommaordot:
+		    crossvar.FO = crossvar.FO + ","
+	    	else:
+		    crossvar.FO = crossvar.FO + "."
+	    f=open("constraintssss.lp","a+")
+	    f.write(crossvar.FO + "\n")
+	    f.close()		
+	    print(crossvar.FO)
+            print(crossvar.myflag)
+	    crossvar.FO=":-"
+	    return
 
+
+	#Misbah	
+
+	#for item1, item2 in network.formulas_iter():
+		#print(item)
+
+	print("-----------%d Solution----------"% c["found"])
+	def forliteral((var, sign)):
+           return "%s%s" % ("!" if sign == -1 else "", var)
+
+    	def clausesforand(clause):
+           expr = " & ".join(map(forliteral, clause))
+           if len(clause) > 1:
+              return "(%s)" % expr
+           return expr
+
+    	def clauseforor(clauses):
+           if len(clauses) == 0:
+              return "FALSE"
+           return " | ".join(map(clausesforand, clauses))
+
+   	for n, item in network.formulas_iter():
+           expr = clauseforor(item)
+           #print("%s <- %s;" % (n, expr))
+	#Misbah'''
     try:
         identifier.solutions(on_model, limit=args.limit, force_weight=args.force_weight)
     finally:
@@ -166,32 +254,38 @@ def do_identify(args):
         if networks:
             networks.to_csv(args.output)
         os.unlink(domainlp)
-
-
+    
 
 def do_validate(args):
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
     networks = read_networks(args)
-
+    
+    TPtime = time.time()
     tp = 0
     c = 0
     nb = len(networks)
     tp_indexes = []
+    firstTPtime = 0
     try:
         for network in networks:
             c += 1
             sys.stderr.write("%d/%d... " % (c,nb))
+	    #print("%d/%d... " % (c,nb))
             sys.stderr.flush()
             if is_true_positive(args, dataset, network):
                 tp_indexes.append(c-1)
                 tp += 1
+                if tp == 1:
+                    firstTPtime = time.time() - TPtime
+                    print(firstTPtime)
             sys.stderr.write("%d/%d true positives\r" % (tp,c))
         res = "%d/%d true positives [rate: %0.2f%%]" % (tp, nb, (100.*tp)/nb)
-        print(res)
+        print(res, firstTPtime)
         if args.tee:
             with open(args.tee, "w") as f:
                 f.write("%s\n" % res)
+		print("%s\n" % res)
     finally:
         if args.output and tp_indexes:
             networks[tp_indexes].to_csv(args.output)
@@ -226,6 +320,24 @@ def run():
                                     help="Force the maximum weight of a solution")
     identify_parser.add_argument("--force-size", type=int, default=None,
                                     help="Force the maximum size of a solution")
+    #xor-start
+    identify_parser.add_argument("--xor", type=int, default=None,
+                                 help="The number of xor constraints to create")
+    #identify_parser.add_argument("--q", type=int, default=2,
+	#			help="The sampling factor related to the size of each constraint")
+    #xor-end
+
+    #Misbah -- Execution time Recalling Solver
+    identify_parser.add_argument("--debug", action="store_true", default=False)
+    identify_parser.add_argument("--RC", type=int, default=None,
+                                 help="Invoke Solver Again")
+    #Misbah -- Execution time Recalling Solver
+
+    #Misbah -- Try Planning Instead of Model Checking ---
+    identify_parser.add_argument("--plan", type=int, default=None,
+                                 help="Invoke planning.lp to verify traces of BNs")
+    #Misbah -- Try Planning Instead of Model Checking ---
+
     modelchecking_p = ArgumentParser(add_help=False)
     modelchecking_p.add_argument("--semantics",
         choices=modelchecking.MODES, default=modelchecking.U_GENERAL,

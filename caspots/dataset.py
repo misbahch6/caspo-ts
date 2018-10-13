@@ -4,16 +4,20 @@ import sys
 import pandas as pd
 import numpy as np
 
-import gringo
+#import gringo
+import clingo 
+#from caspo.core.setup import Setup
+#from caspo.core.literal import Literal
+#from caspo.core.clamping import Clamping, ClampingList
 
-from caspo.core.setup import Setup
-from caspo.core.literal import Literal
-from caspo.core.clamping import Clamping, ClampingList
+from .setup import Setup
+from .literal import Literal
+from .clamping import Clamping, ClampingList
 
 from .asputils import *
 from .utils import *
 
-
+from crossvar import globalvariables
 class Experiment:
     def __init__(self, id):
         self.id = id
@@ -154,10 +158,10 @@ class Dataset:
             clampings.append(Clamping(literals))
             for time, obs in exp.dobs.items():
                 for var, dval in obs.items():
-                    fs.add(gringo.Fun('obs', [i, time, var, dval]))
+                    fs.add(clingo.Function('obs', [i, time, var, dval]))
         clampings = ClampingList(clampings)
         fs.update(clampings.to_funset("exp"))
-        fs.add(gringo.Fun('dfactor', [self.dfactor]))
+        fs.add(clingo.Function('dfactor', [self.dfactor]))
         return fs
 
     def __str__(self):

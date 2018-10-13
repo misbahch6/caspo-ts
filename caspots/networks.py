@@ -1,8 +1,8 @@
 
 import itertools as it
 
-import gringo
-
+#import gringo
+import clingo
 import pandas as pd
 
 from .asputils import *
@@ -18,7 +18,8 @@ def domain_of_networks(networks, hypergraph, dataset):
 
     for i, network in enumerate(networks):
         for v, f in network.formulas_iter():
-            f= gringo.Fun("formula", [v, formulas[formulas == f].index[0]])
+	    f= clingo.Function("formula", [v, formulas[formulas == f].index[0]])
+	    #print("%s :- model(%d)." % (f,i))
             domain.append("%s :- model(%d)." % (f,i))
 
     return "%s%s\n" % (fs.to_str(), "\n".join(domain))

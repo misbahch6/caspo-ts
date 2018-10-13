@@ -17,6 +17,7 @@ path(U,V) :- path(U,W); path(W,V).
 % V is not leading to any readout (non-observable)
 :- path(_,V); not readout(V); not path(V,U) : readout(U).
 
+
 % clampings from each experimental condition
 %clamped(E,V) :- clamped(E,V,_).
 %free(E,V,I)  :- formula(V,I); dnf(I,_); exp(E); not clamped(E,V).
@@ -39,4 +40,6 @@ path(U,V) :- path(U,W); path(W,V).
 
 :- maxsize + 1 #sum {L,I,J : dnf(I,J) , hyper(I,J,L) }; maxsize >= 0.
 %:- maxrss + 1 #sum {W,E,V,S : not eval(E,V,-S) , obs(E,V,D) , rss(D,V,S,W) }; maxrss >= 0.
+
+%:- formula("sos",8), formula("traf2",0), formula("map3k1",1), formula("ikb",7), formula("ap1",10), formula("pi3k",2), formula("gsk3",3), formula("raf1",11), formula("nfkb",4), formula("egfr",5), formula("erk",13), formula("p38",6), dnf(8,20), dnf(10,23), dnf(11,24), dnf(5,12), dnf(4,10), dnf(13,25), dnf(0,0), dnf(1,3), dnf(5,11), dnf(7,17), clause(20,"egfr",1), clause(17,"traf2",-1), clause(24,"sos",1), clause(3,"raf1",1), clause(23,"map3k1",1), clause(0,"map3k1",-1), clause(25,"raf1",1), clause(10,"ikb",-1), clause(11,"map3k1",-1), clause(12,"egf",1).
 

@@ -11,14 +11,16 @@ def make_smv(dataset, network, destfile, update=U_GENERAL):
 
     # nodes referenced in dataset
     dvars = dataset.setup.nodes.union(network.variables())
+    #print(dvars)
 
     # nodes for which a function is defined
     varying_nodes = set([node for node, _ in network.formulas_iter()])
+    #print(varying_nodes)
 
     # nodes with no function (i.e., constant value)
     constants = dvars.difference(varying_nodes)
     #constants = dataset.stimulus.difference(varying_nodes)
-
+    #print(constants)
     dirty_start = set()
     for exp in dataset.experiments.values():
         if 0 not in exp.obs:
@@ -132,7 +134,7 @@ def make_smv(dataset, network, destfile, update=U_GENERAL):
     for n in varying_nodes:
         smv.write(" & !u_%s" % n)
     smv.write(");\n")
-    
+
     def ctl_of_exp(exp):
         ts = list(sorted(exp.obs.keys()))
         ctl = "(E%d_SETUP & E%d_T0) -> " % (exp.id, exp.id)
@@ -156,11 +158,10 @@ def verify(dataset, network, destfile, *args, **kwargs):
     smvfile = make_smv(dataset, network, destfile, *args, **kwargs)
     output = subprocess.check_output(["NuSMV", "-coi", "-dcx", smvfile])
     ret = output.strip().split()[-1].decode()
-    print output
-    print ret
     return ret == "true"
-    
-'''        smv.write("\nSPEC (\n  ")
+
+'''
+smv.write("\nSPEC (\n  ")
     smv.close()
     return destfile
 
@@ -206,5 +207,4 @@ def verify(dataset, network, destfile, *args, **kwargs):
             globalvariables.contraintonexp = exp.id
 	    break
     return ret == "true"
-    '''
-
+'''
