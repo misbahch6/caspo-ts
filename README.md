@@ -73,6 +73,7 @@ and a trace with the estimated MSE: in such a case, the displayed MSE is the
 actual minimal MSE of the PKN with respect to the dataset.
 
 #### Authors
+- Misbah Razzaq
 - Max Ostrowski
 - Loïc Paulevé
 - Anne Siegel
