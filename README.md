@@ -7,19 +7,18 @@ Programming and Model Checking.
 ## Installation
 
 ### With conda
+```shell
+conda create -n caspots-test -c potassco -c colomoto caspo nusmv clingo pip
+conda activate caspots-test
+pip install git+https://github.com/misbahch6/caspo-ts.git@update-clingo5
+```
 
-name: caspots-test
-channels:
-  - potassco
-  - colomoto
-dependencies:
-  - python
-  - pip
-  - nusmv
-  - caspo
-  - clingo
-  - pip:
-    - git+https://github.com/misbahch6/caspo-ts.git@update-clingo5 
+or simply use the [env.yml](https://raw.githubusercontent.com/misbahch6/caspo-ts/refs/heads/update-clingo5/env.yml) file.
+
+```shell
+conda env create -f env.yml
+conda activate caspots-test
+```
 
 ## Available Commands
 
