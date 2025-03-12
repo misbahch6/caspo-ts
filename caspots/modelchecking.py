@@ -7,7 +7,7 @@ U_ASYNC = "asynchronous"
 
 MODES = [U_GENERAL, U_ASYNC]
 
-def make_smv(dataset, network, destfile, update=U_GENERAL):
+def make_smv(dataset, network, destfile, update:str =U_GENERAL):
 
     # nodes referenced in dataset
     dvars = dataset.setup.nodes.union(network.variables())
@@ -62,7 +62,8 @@ def make_smv(dataset, network, destfile, update=U_GENERAL):
         #smv.write("next(u_%s) := {TRUE, FALSE};\n" % n)
     smv.write("\nDEFINE\n")
 
-    def nusmv_of_literal((var, sign)):
+    def nusmv_of_literal(literal):
+        var, sign = literal
         return "%sn_%s" % ("!" if sign == -1 else "", var)
 
     def nusmv_of_clause(clause):

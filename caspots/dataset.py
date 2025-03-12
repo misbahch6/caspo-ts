@@ -4,7 +4,10 @@ import sys
 import pandas as pd
 import numpy as np
 
-import gringo
+#import gringo
+import clingo
+
+from clingo.symbol import Function, Number, String
 
 from caspo.core.setup import Setup
 from caspo.core.literal import Literal
@@ -108,7 +111,7 @@ class Dataset:
 
         for i, row in df.iterrows():
             clamps = set()
-            for var, sign in row.filter(regex='^TR').iteritems():
+            for var, sign in row.filter(regex='^TR').items():
                 var = var[3:]
                 sign = int(sign)
                 if var in stimuli:
@@ -125,7 +128,7 @@ class Dataset:
                 time = None
             exp = exp_of_clamps(clamps, time)
 
-            for var, fvalue in row.filter(regex='^DV').iteritems():
+            for var, fvalue in row.filter(regex='^DV').items():
                 if np.isnan(fvalue):
                     continue
                 var = var[3:]
@@ -143,7 +146,6 @@ class Dataset:
         for eid in todel:
             del self.experiments[eid]
 
-
     def to_funset(self):
         fs = funset(self.setup)
         clampings = []
@@ -154,10 +156,10 @@ class Dataset:
             clampings.append(Clamping(literals))
             for time, obs in exp.dobs.items():
                 for var, dval in obs.items():
-                    fs.add(gringo.Fun('obs', [i, time, var, dval]))
+                    fs.add(Function('obs', [Number(i), Number(time), String(var), Number(dval)]))
         clampings = ClampingList(clampings)
         fs.update(clampings.to_funset("exp"))
-        fs.add(gringo.Fun('dfactor', [self.dfactor]))
+        fs.add(Function('dfactor', [Number(self.dfactor)]))
         return fs
 
     def __str__(self):

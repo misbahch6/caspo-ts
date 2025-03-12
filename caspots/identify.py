@@ -8,7 +8,8 @@ import sys
 import tempfile
 import time
 
-import gringo
+from clingo.control import Control
+from clingo.symbol import Function, Number, String
 
 from caspo.core import LogicalNetwork
 
@@ -24,11 +25,11 @@ def crunch_data(answer, predicate, factor):
     }
     keys = set()
     for a in answer:
-        p = a.name()
+        p = a.name
         if p in ["obs", predicate]:
-            args = a.args()
+            args = a.arguments
             key = tuple(args[:3])
-            val = args[3]
+            val = args[3].number
             if p == "obs":
                 val /= factor
             t = "obs" if p == "obs" else "bin"
@@ -48,13 +49,13 @@ def MSE(cd):
     return math.sqrt(cum/n)
 
 def count_predicate(answer, predicate):
-    return len([a for a in answer if a.name() == predicate])
+    return len([a for a in answer if a.name == predicate])
 
 class ASPSample:
     def __init__(self, opts, model):
         self.opts = opts
-        self.atoms = model.atoms()
-        self.optimization = model.optimization()
+        self.atoms = model.symbols(atoms=True)
+        self.optimization = model.cost
 
     def weight(self):
         return self.optimization
@@ -113,7 +114,7 @@ class ASPSolver:
             self.domain = [domain]
 
     def default_control(self, *args):
-        control = gringo.Control(["--conf=trendy", "--stats",
+        control = Control(["--conf=trendy", "--stats",
                             "--opt-strat=usc"] + list(args))
         for f in self.domain:
             control.load(f)
@@ -137,9 +138,10 @@ class ASPSolver:
         for f in scripts:
             control.load(f)
         control.ground([("base", [])])
-        with control.solve_iter() as solutions:
-            for model in solutions:
+        with control.solve(yield_=True) as hnd:
+            for model in hnd:
                 return ASPSample(self.opts, model)
+            
 
     def solution_samples(self):
         i = 1
@@ -194,10 +196,10 @@ class ASPSolver:
         start = time.time()
 
         if force_weight is None:
-            control.assign_external(gringo.Fun("tolerance"),False)
+            control.assign_external(Function("tolerance"),False)
             dbg("# start initial solving")
             opt = []
-            res = control.solve(None, lambda model: opt.append(model.optimization()))
+            res = control.solve(on_model=lambda model: opt.append(model.cost))
             dbg("# initial solve took %s" % (time.time()-start))
 
             optimizations = opt.pop()
@@ -211,7 +213,7 @@ class ASPSolver:
                     on_model_weight(sample)
                 return
 
-            control.assign_external(gringo.Fun("tolerance"),True)
+            control.assign_external(Function("tolerance"),True)
         else:
             weight = force_weight
             dbg("# force weight = %d" % weight)
@@ -220,9 +222,9 @@ class ASPSolver:
         control.add("minWeight", [], ":- not " + str(weight) + " #sum {Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50;" + " Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50} " + str(max_weight) + " .")
         control.ground([("minWeight", [])])
 
-        control.conf.solve.opt_mode = "ignore"
-        control.conf.solve.project = 1 # ????
-        control.conf.solve.models = limit # ????
+        control.configuration.solve.opt_mode = "ignore"
+        control.configuration.solve.project = 1 # ????
+        control.configuration.solve.models = limit # ????
         #print control.conf.solver[0].keys()
 
         if do_mincard:
@@ -234,13 +236,13 @@ class ASPSolver:
             control.ground([("minSize", [])])
 
         if do_subsets:
-            control.conf.solve.enum_mode = "domRec"
-            control.conf.solver[0].heuristic = "Domain"
-            control.conf.solver[0].dom_mod = "5,16"
+            control.configuration.solve.enum_mode = "domRec"
+            control.configuration.solver[0].heuristic = "Domain"
+            control.configuration.solver[0].dom_mod = "5,16"
 
         start = time.time()
         dbg("# begin enumeration")
-        res = control.solve(None, on_model)
+        res = control.solve(on_model=on_model)
         dbg("# enumeration took %s" % (time.time()-start))
 
 

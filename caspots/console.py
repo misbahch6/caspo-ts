@@ -5,8 +5,7 @@ import os
 import sys
 import tempfile
 
-import gringo
-
+from clingo.solving import Model
 from caspo.core import Graph, HyperGraph, LogicalNetwork, LogicalNetworkList
 
 from .networks import *
@@ -141,10 +140,15 @@ def do_identify(args):
         output.flush()
 
 
-    def on_model(model):
+    def on_model(model:Model):
         c["found"] += 1
         skip = False
-        tuples = (f.args() for f in model.atoms() if f.name() == "dnf")
+        #tuples = [f.arguments for f in model.symbols(shown=True) if f.name == "dnf"]
+        #print(tuples)
+        tuples = []
+        for f in model.symbols(atoms=True):
+            if f.name == "dnf" and len(f.arguments) == 2:
+                tuples.append([arg.number for arg in f.arguments])
         network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
         if args.true_positives:
             if is_true_positive(args, dataset, network):
