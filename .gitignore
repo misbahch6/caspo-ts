@@ -2,3 +2,4 @@
 *.swp
 /*.csv
 __pycache__
+*.egg-info

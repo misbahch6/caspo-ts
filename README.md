@@ -22,27 +22,25 @@ conda activate caspots-test
 
 ## Available Commands
 
-Here we show the available commands offered by the caspo-ts system. If manually
-installed caspots from source run it with `python cli.py`. In the conda enviornment
-the command `caspots` is available instead.
+Here we show the available commands offered by the caspo-ts system.
 
 ### 1) Identify all Boolean Networks
 
-    python cli.py identify PKN.sif DATASET.csv RESULTS.csv
+    caspots identify PKN.sif DATASET.csv RESULTS.csv
 
 This command calculates all BNs for a given prior knowledge network and time
 series data. To limit the number of BNs, option `--limit n` can be used.
 
 ### 2) Minimum Square Error (MSE) Calculation
 
-    python cli.py mse PKN.sif DATASET.csv
+    caspots mse PKN.sif DATASET.csv
 
 Option `--networks file` to specify the csv file containing the BNs to
 calculate the MSE for.
 
 ### 3) Validation of Boolean Networks through Model Checking
 
-    python cli.py validate PKN.sif DATASET.csv RESULTS.csv
+    caspots validate PKN.sif DATASET.csv RESULTS.csv
 
 This command invokes a model-checker (NuSMV) to calculate true positive BNs.
 The true positive rate is then displayed.
