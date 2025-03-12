@@ -94,10 +94,10 @@ To idenfify 10 BNs for the `BT549` cell line:
     caspots identify datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv --limit 10
 
     # start initial solving
-    # initial solve took 865.829895973
+    # initial solve took 174.37147617340088
     # optimizations = [0]
     # begin enumeration
-    # enumeration took 12.5855491161
+    # enumeration took 2.1883344650268555
     10 solution(s) for the over-approximation
 
 Note that it may take few minutes (about 10 min depending on the machine) to
@@ -108,11 +108,11 @@ To calculate the MSE:
 
     caspots mse datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv --networks result.csv
 
-    MSE_discrete = 0.349898336884
-    MSE_sample >= 0.349898336884
+    MSE_discrete = 0.3498983368835096
+    MSE_sample >= 0.3514026055805377
 
 To model check the learned BNs:
 
     caspots validate datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv
 
-    6/10 true positives [rate: 60.00%]
+    10/10 true positives [rate: 60.00%]
