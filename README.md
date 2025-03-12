@@ -55,8 +55,6 @@ The true positive rate is then displayed.
     `benchmarks/1/dataset1_cmpr_bn_1.csv`
   * `RESULTS.csv` is a CSV description of a set of Boolean Networks, as
     outputted by our python scripts.
-  * `python` is the python interpreter in version 2.7.X. On some systems, you
-    should use `python2`.
   * The `datasets` folder contains the `DREAM 8` Challenge dataset.
 
 ## Usage
