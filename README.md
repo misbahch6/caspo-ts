@@ -115,4 +115,4 @@ To model check the learned BNs:
 
     caspots validate datasets/Dream8/merge_hpn_cmpr_CS.sif datasets/Dream8/BT549Refined-remove-ready.csv result.csv
 
-    10/10 true positives [rate: 60.00%]
+    10/10 true positives [rate: 100.00%]
