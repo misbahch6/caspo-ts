@@ -8,7 +8,7 @@ Programming and Model Checking.
 
 ### With conda
 ```shell
-conda create -n caspots-test -c potassco -c colomoto caspo nusmv clingo pip
+conda create -n caspots-test -c potassco -c bioasp -c colomoto caspo nusmv clingo pip
 conda activate caspots-test
 pip install git+https://github.com/misbahch6/caspo-ts.git@update-clingo5
 ```
