@@ -116,6 +116,7 @@ class ASPSolver:
     def default_control(self, *args):
         control = Control(["--conf=trendy", "--stats",
                             "--opt-strat=usc"] + list(args))
+        control.add("base", [], "#show.")
         for f in self.domain:
             control.load(f)
         control.load(aspf("supportConsistency.lp"))
