@@ -1,7 +1,7 @@
 import re
 
-re_clause = re.compile("(\w+)\(([^\)]*)\)\.")
-re_answer = re.compile("(\w+)\(([^\)]*)\)")
+re_clause = re.compile(r"(\w+)\(([^\)]*)\)\.")
+re_answer = re.compile(r"(\w+)\(([^\)]*)\)")
 
 
 def parse_args(args):
