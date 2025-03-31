@@ -1,13 +1,23 @@
-from __future__ import print_function
+"""
+This module is provides functions to compute Boolean networks using Answer Set
+Programming (ASP). It includes utilities for data processing, error
+calculation, and ASP-based problem solving.
+
+- Processes ASP solution data into structured formats.
+- Calculates Mean Squared Error (MSE) between observed and guessed data.
+- Manages ASP samples and constructs logical networks.
+- Runs an ASP solver to generate and iterate over solutions.
+"""
 
 import math
 import os
 import tempfile
 import time
-from typing import Any, Sequence
+from typing import Any, Callable, Iterator, Sequence
 
 from caspo.core import Dataset, LogicalNetwork
 from caspo.core.hypergraph import HyperGraph
+from clingo import Configuration
 from clingo.control import Control
 from clingo.solving import Model
 from clingo.symbol import Function, Symbol
@@ -180,6 +190,17 @@ class ASPSample:
 
 
 class ASPSolver:
+    """
+    A solver for Answer Set Programming (ASP) problems.
+
+    Attributes:
+        termset: Set of terms for the ASP problem.
+        data: String representation of the termset.
+        opts: Options for the solver.
+        debug: Flag for debug mode.
+        domain: List of domain files for the ASP problem.
+    """
+
     termset: funset
     data: str
     opts: Any
@@ -187,6 +208,14 @@ class ASPSolver:
     domain: list[str]
 
     def __init__(self, termset: funset, opts: Any, domain: str | None):
+        """
+        Initialize the ASPSolver.
+
+        Args:
+            termset: Set of terms for the ASP problem.
+            opts: Options for the solver.
+            domain: Domain file or None for default domain.
+        """
         self.termset = termset
         self.data = termset.to_str()
         self.opts = opts
@@ -198,7 +227,16 @@ class ASPSolver:
         else:
             self.domain = [domain]
 
-    def default_control(self, *args):
+    def default_control(self, *args: str) -> Control:
+        """
+        Create a default Control object for ASP solving.
+
+        Args:
+            *args: Additional arguments for the Control object.
+
+        Returns:
+            Configured Control object for ASP solving.
+        """
         control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
         control.add("base", [], "#show.")
         for f in self.domain:
@@ -208,14 +246,25 @@ class ASPSolver:
         control.add("base", [], self.data)
         return control
 
-    def sample(self, first, scripts=(), weight=None) -> ASPSample | None:
+    def sample(self, first: bool, scripts: Sequence[str] = (), weight: int | None = None) -> ASPSample | None:
+        """
+        Generate a sample solution for the ASP problem.
+
+        Args:
+            first: If True, use weight minimization.
+            scripts: Additional script files to load.
+            weight: Specific weight to use.
+
+        Returns:
+            A sample solution or None if no solution found.
+        """
         control = self.default_control()
-        if weight:
+        if weight is not None:
             control.load(aspf("tolerance.lp"))
             control.add(
                 "base",
                 [],
-                "#const minWeight=%s. #const maxWeight=%s" % (weight, weight),
+                f"#const minWeight={weight}. #const maxWeight={weight}",
             )
 
         control.load(aspf("showMeasured.lp"))
@@ -232,19 +281,27 @@ class ASPSolver:
 
         return None
 
-    def solution_samples(self):
+    def solution_samples(self) -> Iterator[ASPSample]:
+        """
+        An iterator for solution samples.
+
+        Yields:
+            Solution samples for the ASP problem.
+        """
         i = 1
         if self.debug:
-            dbg("# model %d" % i)
+            dbg(f"# model {i}")
         s = self.sample(True)
+        if s is None:
+            return
         yield s
 
-        weight = s.optimization
+        weight = s.optimization[0]
         fd, excludelp = tempfile.mkstemp(".lp")
         os.close(fd)
 
-        with open(excludelp, "w") as f:
-            f.write("%s\n" % s.asp_exclusion())
+        with open(excludelp, "w", encoding="utf-8") as f:
+            f.write(f"{s.asp_exclusion()}\n")
 
         args = [excludelp]
         while True:
@@ -252,20 +309,39 @@ class ASPSolver:
             if s:
                 i += 1
                 if self.debug:
-                    dbg("# model %d" % i)
+                    dbg(f"# model {i}")
                 yield s
-                with open(excludelp, "a") as f:
-                    f.write("%s\n" % s.asp_exclusion())
+                with open(excludelp, "a", encoding="utf-8") as f:
+                    f.write(f"{s.asp_exclusion()}")
             else:
                 print("# Enumeration complete")
                 break
         os.unlink(excludelp)
 
-    def solutions(self, on_model, on_model_weight=None, limit=0, force_weight=None):
+    def solutions(
+        self,
+        on_model: Callable[[Model], bool | None],
+        on_model_weight: Callable[[ASPSample], None] | None = None,
+        limit: int = 0,
+        force_weight: int | None = None,
+    ) -> None:
+        """
+        Find solutions for the ASP problem.
+
+        Args:
+            on_model: Callback for each model found.
+            on_model_weight: Callback for weight-based models.
+            limit: Maximum number of models to find.
+            force_weight: Force a specific weight for solutions.
+        """
         control = self.default_control("0")
 
         do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
         do_subsets = self.opts.family == "subset" or (self.opts.family == "mincard" and self.opts.mincard_tolerance)
+        # FIXME: The code involving minsize seems broken. Without the statement
+        # below minsize would be unbound in some cases. It only get's set for
+        # very specific options.
+        minsize = 0
 
         control.load(aspf("minimizeWeightOnly.lp"))
         if do_mincard:
@@ -284,11 +360,11 @@ class ASPSolver:
             control.assign_external(Function("tolerance"), False)
             dbg("# start initial solving")
             opt = []
-            res = control.solve(on_model=lambda model: opt.append(model.cost))
-            dbg("# initial solve took %s" % (time.time() - start))
+            control.solve(on_model=lambda model: opt.append(model.cost))
+            dbg(f"# initial solve took {time.time() - start}")
 
             optimizations = opt.pop()
-            dbg("# optimizations = %s" % optimizations)
+            dbg(f"# optimizations = {optimizations}")
 
             weight = optimizations[0]
             if do_mincard:
@@ -301,7 +377,7 @@ class ASPSolver:
             control.assign_external(Function("tolerance"), True)
         else:
             weight = force_weight
-            dbg("# force weight = %d" % weight)
+            dbg(f"# force weight = {weight}")
 
         max_weight = weight + self.opts.weight_tolerance
         control.add(
@@ -316,9 +392,14 @@ class ASPSolver:
         )
         control.ground([("minWeight", [])])
 
-        control.configuration.solve.opt_mode = "ignore"
-        control.configuration.solve.project = 1  # ????
-        control.configuration.solve.models = limit  # ????
+        solve_opts = control.configuration.solve
+        solver_opts = control.configuration.solver
+        assert isinstance(solve_opts, Configuration)
+        assert isinstance(solver_opts, Configuration)
+
+        solve_opts.opt_mode = "ignore"
+        solve_opts.project = 1  # ????
+        solve_opts.models = limit  # ????
         # print control.conf.solver[0].keys()
 
         if do_mincard:
@@ -334,11 +415,11 @@ class ASPSolver:
             control.ground([("minSize", [])])
 
         if do_subsets:
-            control.configuration.solve.enum_mode = "domRec"
-            control.configuration.solver[0].heuristic = "Domain"
-            control.configuration.solver[0].dom_mod = "5,16"
+            solve_opts.enum_mode = "domRec"
+            solver_opts.heuristic = "Domain"
+            solver_opts.dom_mod = "5,16"
 
         start = time.time()
         dbg("# begin enumeration")
-        res = control.solve(on_model=on_model)
-        dbg("# enumeration took %s" % (time.time() - start))
+        control.solve(on_model=on_model)
+        dbg(f"# enumeration took {time.time() - start}")
