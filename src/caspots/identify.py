@@ -6,7 +6,8 @@ import tempfile
 import time
 from typing import Sequence
 
-from caspo.core import LogicalNetwork
+from caspo.core import Dataset, LogicalNetwork
+from caspo.core.hypergraph import HyperGraph
 from clingo.control import Control
 from clingo.solving import Model
 from clingo.symbol import Function, Symbol
@@ -84,18 +85,36 @@ def count_predicate(answer: Sequence[Symbol], predicate: str) -> int:
 
 
 class ASPSample:
+    """
+    Represents a sample from an Answer Set Programming (ASP) solution.
+
+    Attributes:
+        atoms: Sequence of Symbol objects representing atoms in the ASP model.
+        optimization: Sequence of integers representing optimization values.
+    """
+
     atoms: Sequence[Symbol]
     optimization: Sequence[int]
 
     def __init__(self, opts, model: Model):
+        """
+        Initialize ASPSample with options and ASP model.
+
+        Args:
+            opts: Options object containing configuration settings.
+            model: ASP model object.
+        """
         self.opts = opts
         self.atoms = model.symbols(atoms=True)
         self.optimization = model.cost
 
-    def weight(self) -> Sequence[int]:
-        return self.optimization
-
     def asp_exclusion(self) -> str:
+        """
+        Generate ASP exclusion constraint based on current atoms.
+
+        Returns:
+            String representation of the ASP exclusion constraint.
+        """
         predicates = ["formula", "dnf", "clause"]
         if self.opts.enum_traces:
             predicates += ["guessed"]
@@ -109,24 +128,48 @@ class ASPSample:
                 "%d{dnf(I,J): hyper(I,J,N)}%d" % (nb_dnf, nb_dnf),
                 "%d{clause(J,V,B): edge(J,V,B)}%d" % (nb_clause, nb_clause),
             ]
-        return ":- %s." % ", ".join(map(str, clauses))
+        return f":- {', '.join(map(str, clauses))}."
 
-    def mse(self):
+    def mse(self) -> tuple[float, float]:
+        """
+        Calculate Mean Squared Error for measured and guessed data.
+
+        Returns:
+            Tuple of (MSE for measured data, MSE for guessed data).
+        """
         cd_measured = crunch_data(self.atoms, "measured", self.opts.factor)
         cd_guessed = crunch_data(self.atoms, "guessed", self.opts.factor)
         mse0 = calculate_mse(cd_measured)
         mse = calculate_mse(cd_guessed)
         return (mse0, mse)
 
-    def network(self, hypergraph):
-        tuples = (f.args() for f in self.atoms if f.name() == "dnf")
+    def network(self, hypergraph: HyperGraph) -> LogicalNetwork:
+        """
+        Create a LogicalNetwork from the sample's atoms and given hypergraph.
+
+        Args:
+            hypergraph: Hypergraph object to use in network creation.
+
+        Returns:
+            LogicalNetwork object constructed from the sample's atoms.
+        """
+        tuples = (tuple(arg.number for arg in f.arguments) for f in self.atoms if f.match("dnf", 2))
         return LogicalNetwork.from_hypertuples(hypergraph, tuples)
 
-    def trace(self, dataset):
+    def trace(self, dataset: Dataset) -> Dataset:
+        """
+        Update the given dataset using the 'guessed' predicates from the sample.
+
+        Args:
+            dataset: Dataset object to be updated.
+
+        Returns:
+            Updated dataset with modifications based on 'guessed' predicates.
+        """
         # rewrite dataset using guessed predicate
         for a in self.atoms:
-            if a.name() == "guessed":
-                eid, t, node, value = a.args()
+            if a.name == "guessed":
+                eid, t, node, value = a.arguments
                 if node not in dataset.readout:
                     continue
                 if dataset.experiments[eid].obs[t][node] != value:
