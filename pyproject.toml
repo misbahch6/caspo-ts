@@ -27,6 +27,9 @@ caspots = "caspots.console:run"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+caspots = ["*.lp"]
+
 [tool.isort]
 profile = "black"
 line_length = 120
