@@ -7,7 +7,8 @@ U_ASYNC = "asynchronous"
 
 MODES = [U_GENERAL, U_ASYNC]
 
-def make_smv(dataset, network, destfile, update:str =U_GENERAL):
+
+def make_smv(dataset, network, destfile, update: str = U_GENERAL):
 
     # nodes referenced in dataset
     dvars = dataset.setup.nodes.union(network.variables())
@@ -17,7 +18,7 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
 
     # nodes with no function (i.e., constant value)
     constants = dvars.difference(varying_nodes)
-    #constants = dataset.stimulus.difference(varying_nodes)
+    # constants = dataset.stimulus.difference(varying_nodes)
 
     dirty_start = set()
     for exp in dataset.experiments.values():
@@ -49,7 +50,7 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
     for n in dirty_start:
         smv.write("next(dirty_%s) := FALSE;\n" % n)
     for n in constants:
-        smv.write("next(n_%s) := n_%s;\n" % (n,n))
+        smv.write("next(n_%s) := n_%s;\n" % (n, n))
     for n in varying_nodes:
         smv.write("next(n_%s) := case " % n)
         if n not in dataset.readout:
@@ -59,7 +60,7 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
         smv.write("u_%s: F_%s; TRUE: n_%s; esac;\n" % (n, n, n))
         if n in clampable:
             smv.write("next(C_%s) := C_%s;\n" % (n, n))
-        #smv.write("next(u_%s) := {TRUE, FALSE};\n" % n)
+        # smv.write("next(u_%s) := {TRUE, FALSE};\n" % n)
     smv.write("\nDEFINE\n")
 
     def nusmv_of_literal(literal):
@@ -88,20 +89,19 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
     for exp in dataset.experiments.values():
         setup = []
         # enforce initial state of clamped nodes
-        for (n, c) in exp.mutations.items():
+        for n, c in exp.mutations.items():
             setup.append("%sn_%s" % ("!" if c < 0 else "", n))
         # specify clamping setting
         for n in clampable:
             if n in exp.mutations:
                 c = exp.mutations[n]
-                setup.append("C_%s=%s" % (n,c))
+                setup.append("C_%s=%s" % (n, c))
             else:
                 setup.append("C_%s=0" % n)
 
         smv.write("E%d_SETUP := %s;\n" % (exp.id, " & ".join(setup) or "TRUE"))
         if 0 not in exp.obs:
-            smv.write("E%d_T0 := %s;\n" % (exp.id, t,
-                " & ".join(["dirty_%s" % n for n in dirty_start])))
+            smv.write("E%d_T0 := %s;\n" % (exp.id, t, " & ".join(["dirty_%s" % n for n in dirty_start])))
         for t, values in exp.obs.items():
             state = []
             for n, v in values.items():
@@ -118,8 +118,8 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
     smv.write("\nTRANS\n")
     smv.write("  next(start) != start")
     for n in varying_nodes:
-        smv.write("\n| next(n_%s) != n_%s" % (n,n))
-        smv.write("\n| next(u_%s) != u_%s" % (n,n))
+        smv.write("\n| next(n_%s) != n_%s" % (n, n))
+        smv.write("\n| next(u_%s) != u_%s" % (n, n))
     smv.write("\n| FIXEDPOINTS")
     smv.write(";\n")
 
@@ -143,7 +143,7 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
                 return "TRUE"
         for t in ts:
             ctl += "EF (E%d_T%d & " % (exp.id, t)
-        ctl = ctl[:-2] + ")"*len(ts)
+        ctl = ctl[:-2] + ")" * len(ts)
         return "(%s)" % ctl
 
     smv.write("\nSPEC (\n  ")
@@ -153,9 +153,9 @@ def make_smv(dataset, network, destfile, update:str =U_GENERAL):
     smv.close()
     return destfile
 
+
 def verify(dataset, network, destfile, *args, **kwargs):
     smvfile = make_smv(dataset, network, destfile, *args, **kwargs)
     output = subprocess.check_output(["NuSMV", "-coi", "-dcx", smvfile])
     ret = output.strip().split()[-1].decode()
     return ret == "true"
-

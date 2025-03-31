@@ -3,3 +3,6 @@
 /*.csv
 __pycache__
 *.egg-info
+.envrc
+.coverage
+build

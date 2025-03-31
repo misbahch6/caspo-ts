@@ -3,7 +3,7 @@ formula(V,I)              :- node(V,I); hyper(I,_,_).
 {dnf(I,J) : hyper(I,J,N)} :- formula(V,I).
 clause(J,V,S)             :- edge(J,V,S); dnf(_,J).
 
-% paths derived from the guess Boolean network 
+% paths derived from the guess Boolean network
 path(U,V) :- formula(V,I); dnf(I,J); edge(J,U,_).
 path(U,V) :- path(U,W); path(W,V).
 
@@ -39,4 +39,3 @@ path(U,V) :- path(U,W); path(W,V).
 
 :- maxsize + 1 #sum {L,I,J : dnf(I,J) , hyper(I,J,L) }; maxsize >= 0.
 %:- maxrss + 1 #sum {W,E,V,S : not eval(E,V,-S) , obs(E,V,D) , rss(D,V,S,W) }; maxrss >= 0.
-

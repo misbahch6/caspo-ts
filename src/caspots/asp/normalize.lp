@@ -33,5 +33,3 @@ toGuess(E,T,S) :- obs(E,T,S,X).
 
 %i have to have the same precondition (time 0) in all experiments
 :- unobsSpec(E1,0,S), unobsSpec(E2,0,S), E1 < E2, measured(E1,0,S,V), not measured(E2,0,S,V).
-
-

@@ -1,10 +1,10 @@
-
 import itertools as it
 
-from clingo import Function, Number, String 
 import pandas as pd
+from clingo import Function, Number, String
 
 from .asputils import *
+
 
 def domain_of_networks(networks, hypergraph, dataset):
     fs = funset(networks)
@@ -17,9 +17,8 @@ def domain_of_networks(networks, hypergraph, dataset):
 
     for i, network in enumerate(networks):
         for v, f in network.formulas_iter():
-            #print("formula", [v, formulas[formulas == f].index[0]])
-            f= Function("formula", [String(v), Number(formulas[formulas == f].index[0])])
-            domain.append("%s :- model(%d)." % (f,i))
+            # print("formula", [v, formulas[formulas == f].index[0]])
+            f = Function("formula", [String(v), Number(formulas[formulas == f].index[0])])
+            domain.append("%s :- model(%d)." % (f, i))
 
     return "%s%s\n" % (fs.to_str(), "\n".join(domain))
-

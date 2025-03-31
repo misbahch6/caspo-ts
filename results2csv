@@ -7,4 +7,3 @@ siffile = sys.argv[2]
 csvfile = sys.argv[3]
 
 csv_of_resultlp(lpfile, siffile, csvfile)
-

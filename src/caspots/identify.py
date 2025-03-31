@@ -1,28 +1,24 @@
-
 from __future__ import print_function
 
 import math
 import os
-from subprocess import *
 import sys
 import tempfile
 import time
+from subprocess import *
 
+from caspo.core import LogicalNetwork
 from clingo.control import Control
 from clingo.symbol import Function, Number, String
 
-from caspo.core import LogicalNetwork
-
-from caspots.config import *
 from caspots import asputils
+from caspots.config import *
 from caspots.utils import *
+
 
 def crunch_data(answer, predicate, factor):
     factor = float(factor)
-    data = {
-        "obs": {},
-        "bin": {}
-    }
+    data = {"obs": {}, "bin": {}}
     keys = set()
     for a in answer:
         p = a.name
@@ -37,6 +33,7 @@ def crunch_data(answer, predicate, factor):
             keys.add(key)
     return (keys, data)
 
+
 def MSE(cd):
     cum = 0
     keys, data = cd
@@ -45,11 +42,13 @@ def MSE(cd):
         if key not in data["obs"]:
             continue
         n += 1
-        cum += (data["obs"][key] - data["bin"][key])**2
-    return math.sqrt(cum/n)
+        cum += (data["obs"][key] - data["bin"][key]) ** 2
+    return math.sqrt(cum / n)
+
 
 def count_predicate(answer, predicate):
     return len([a for a in answer if a.name == predicate])
+
 
 class ASPSample:
     def __init__(self, opts, model):
@@ -72,7 +71,7 @@ class ASPSample:
             clauses += [
                 "%d{formula(V,I): node(V,I)}%d" % (nb_formula, nb_formula),
                 "%d{dnf(I,J): hyper(I,J,N)}%d" % (nb_dnf, nb_dnf),
-                "%d{clause(J,V,B): edge(J,V,B)}%d" % (nb_clause, nb_clause)
+                "%d{clause(J,V,B): edge(J,V,B)}%d" % (nb_clause, nb_clause),
             ]
         return ":- %s." % ", ".join(map(str, clauses))
 
@@ -95,7 +94,7 @@ class ASPSample:
                 if node not in dataset.readout:
                     continue
                 if dataset.experiments[eid].obs[t][node] != value:
-                    #print(((eid,t,node),dataset.experiments[eid].obs[t][node], value), file=sys.stderr)
+                    # print(((eid,t,node),dataset.experiments[eid].obs[t][node], value), file=sys.stderr)
                     dataset.experiments[eid].obs[t][node] = value
         return dataset
 
@@ -114,8 +113,7 @@ class ASPSolver:
             self.domain = [domain]
 
     def default_control(self, *args):
-        control = Control(["--conf=trendy", "--stats",
-                            "--opt-strat=usc"] + list(args))
+        control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
         control.add("base", [], "#show.")
         for f in self.domain:
             control.load(f)
@@ -128,8 +126,7 @@ class ASPSolver:
         control = self.default_control()
         if weight:
             control.load(aspf("tolerance.lp"))
-            control.add("base", [], "#const minWeight=%s. #const maxWeight=%s" %
-                                        (weight,weight))
+            control.add("base", [], "#const minWeight=%s. #const maxWeight=%s" % (weight, weight))
 
         control.load(aspf("showMeasured.lp"))
         if self.opts.family == "subset":
@@ -142,12 +139,11 @@ class ASPSolver:
         with control.solve(yield_=True) as hnd:
             for model in hnd:
                 return ASPSample(self.opts, model)
-            
 
     def solution_samples(self):
         i = 1
         if self.debug:
-            dbg("# model %d" %i)
+            dbg("# model %d" % i)
         s = self.sample(True)
         yield s
 
@@ -164,7 +160,7 @@ class ASPSolver:
             if s:
                 i += 1
                 if self.debug:
-                    dbg("# model %d" %i)
+                    dbg("# model %d" % i)
                 yield s
                 with open(excludelp, "a") as f:
                     f.write("%s\n" % s.asp_exclusion())
@@ -173,15 +169,12 @@ class ASPSolver:
                 break
         os.unlink(excludelp)
 
-    def solutions(self, on_model, on_model_weight=None, limit=0,
-                    force_weight=None):
+    def solutions(self, on_model, on_model_weight=None, limit=0, force_weight=None):
 
         control = self.default_control("0")
 
-        do_mincard = self.opts.family == "mincard" \
-            or self.opts.force_size is not None
-        do_subsets = self.opts.family == "subset" \
-            or (self.opts.family =="mincard" and self.opts.mincard_tolerance)
+        do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
+        do_subsets = self.opts.family == "subset" or (self.opts.family == "mincard" and self.opts.mincard_tolerance)
 
         control.load(aspf("minimizeWeightOnly.lp"))
         if do_mincard:
@@ -192,16 +185,16 @@ class ASPSolver:
         control.load(aspf("show.lp"))
         control.ground([("show", [])])
 
-#****Flavio****
+        # ****Flavio****
 
         start = time.time()
 
         if force_weight is None:
-            control.assign_external(Function("tolerance"),False)
+            control.assign_external(Function("tolerance"), False)
             dbg("# start initial solving")
             opt = []
             res = control.solve(on_model=lambda model: opt.append(model.cost))
-            dbg("# initial solve took %s" % (time.time()-start))
+            dbg("# initial solve took %s" % (time.time() - start))
 
             optimizations = opt.pop()
             dbg("# optimizations = %s" % optimizations)
@@ -214,26 +207,39 @@ class ASPSolver:
                     on_model_weight(sample)
                 return
 
-            control.assign_external(Function("tolerance"),True)
+            control.assign_external(Function("tolerance"), True)
         else:
             weight = force_weight
             dbg("# force weight = %d" % weight)
 
         max_weight = weight + self.opts.weight_tolerance
-        control.add("minWeight", [], ":- not " + str(weight) + " #sum {Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50;" + " Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50} " + str(max_weight) + " .")
+        control.add(
+            "minWeight",
+            [],
+            ":- not "
+            + str(weight)
+            + " #sum {Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50;"
+            + " Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50} "
+            + str(max_weight)
+            + " .",
+        )
         control.ground([("minWeight", [])])
 
         control.configuration.solve.opt_mode = "ignore"
-        control.configuration.solve.project = 1 # ????
-        control.configuration.solve.models = limit # ????
-        #print control.conf.solver[0].keys()
+        control.configuration.solve.project = 1  # ????
+        control.configuration.solve.models = limit  # ????
+        # print control.conf.solver[0].keys()
 
         if do_mincard:
             if self.opts.force_size:
                 maxsize = self.opts.force_size
             else:
                 maxsize = minsize + self.opts.mincard_tolerance
-            control.add("minSize", [], ":- not " + str(minsize) + " #sum {L,I,J : dnf(I,J) , hyper(I,J,L)} " + str(maxsize) + ".")
+            control.add(
+                "minSize",
+                [],
+                ":- not " + str(minsize) + " #sum {L,I,J : dnf(I,J) , hyper(I,J,L)} " + str(maxsize) + ".",
+            )
             control.ground([("minSize", [])])
 
         if do_subsets:
@@ -244,6 +250,4 @@ class ASPSolver:
         start = time.time()
         dbg("# begin enumeration")
         res = control.solve(on_model=on_model)
-        dbg("# enumeration took %s" % (time.time()-start))
-
-
+        dbg("# enumeration took %s" % (time.time() - start))
