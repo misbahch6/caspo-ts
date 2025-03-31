@@ -339,7 +339,7 @@ class ASPSolver:
         do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
         do_subsets = self.opts.family == "subset" or (self.opts.family == "mincard" and self.opts.mincard_tolerance)
         # FIXME: The code involving minsize seems broken. Without the statement
-        # below minsize would be unbound in some cases. It only get's set for
+        # below, minsize would be unbound in some cases. It only gets set for
         # very specific options.
         minsize = 0
 
