@@ -4,7 +4,7 @@ import math
 import os
 import tempfile
 import time
-from typing import Sequence
+from typing import Any, Sequence
 
 from caspo.core import Dataset, LogicalNetwork
 from caspo.core.hypergraph import HyperGraph
@@ -12,6 +12,7 @@ from clingo.control import Control
 from clingo.solving import Model
 from clingo.symbol import Function, Symbol
 
+from caspots.asputils import funset
 from caspots.config import aspf
 from caspots.utils import dbg
 
@@ -179,7 +180,13 @@ class ASPSample:
 
 
 class ASPSolver:
-    def __init__(self, termset, opts, domain=None):
+    termset: funset
+    data: str
+    opts: Any
+    debug: bool
+    domain: list[str]
+
+    def __init__(self, termset: funset, opts: Any, domain: str | None):
         self.termset = termset
         self.data = termset.to_str()
         self.opts = opts
