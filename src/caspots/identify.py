@@ -2,21 +2,34 @@ from __future__ import print_function
 
 import math
 import os
-import sys
 import tempfile
 import time
-from subprocess import *
+from typing import Sequence
 
 from caspo.core import LogicalNetwork
 from clingo.control import Control
-from clingo.symbol import Function, Number, String
+from clingo.solving import Model
+from clingo.symbol import Function, Symbol
 
-from caspots import asputils
-from caspots.config import *
-from caspots.utils import *
+from caspots.config import aspf
+from caspots.utils import dbg
+
+CrunchedData = tuple[set[tuple[Symbol]], dict[str, dict[tuple[Symbol], float]]]
 
 
-def crunch_data(answer, predicate, factor):
+def crunch_data(answer: Sequence[Symbol], predicate: str, factor: float) -> CrunchedData:
+    """
+    Process and organize data from Symbols into 'obs' and 'bin' categories.
+
+    Args:
+        answer: Sequence of Symbol objects to process.
+        predicate: String specifying the predicate for binary data.
+        factor: Float value to scale 'obs' data.
+
+    Returns:
+        Tuple containing a set of unique keys and a dictionary of processed
+        data.
+    """
     factor = float(factor)
     data = {"obs": {}, "bin": {}}
     keys = set()
@@ -25,16 +38,26 @@ def crunch_data(answer, predicate, factor):
         if p in ["obs", predicate]:
             args = a.arguments
             key = tuple(args[:3])
-            val = args[3].number
+            val = float(args[3].number)
             if p == "obs":
                 val /= factor
             t = "obs" if p == "obs" else "bin"
             data[t][key] = val
             keys.add(key)
-    return (keys, data)
+    return keys, data
 
 
-def MSE(cd):
+def calculate_mse(cd: CrunchedData) -> float:
+    """
+    Calculate the Mean Squared Error (MSE) from CrunchedData.
+
+    Args:
+        cd: CrunchedData containing processed observation and binary data.
+
+    Returns:
+        Float value representing the square root of the average squared
+        difference between 'obs' and 'bin' data.
+    """
     cum = 0
     keys, data = cd
     n = 0
@@ -46,24 +69,37 @@ def MSE(cd):
     return math.sqrt(cum / n)
 
 
-def count_predicate(answer, predicate):
-    return len([a for a in answer if a.name == predicate])
+def count_predicate(answer: Sequence[Symbol], predicate: str) -> int:
+    """
+    Count occurrences of a specific predicate in a sequence of Symbols.
+
+    Args:
+        answer: Sequence of Symbol objects to search.
+        predicate: String representing the predicate to count.
+
+    Returns:
+        Number of Symbols with matching predicate name.
+    """
+    return sum(1 for a in answer if a.name == predicate)
 
 
 class ASPSample:
-    def __init__(self, opts, model):
+    atoms: Sequence[Symbol]
+    optimization: Sequence[int]
+
+    def __init__(self, opts, model: Model):
         self.opts = opts
         self.atoms = model.symbols(atoms=True)
         self.optimization = model.cost
 
-    def weight(self):
+    def weight(self) -> Sequence[int]:
         return self.optimization
 
-    def asp_exclusion(self):
+    def asp_exclusion(self) -> str:
         predicates = ["formula", "dnf", "clause"]
         if self.opts.enum_traces:
             predicates += ["guessed"]
-        clauses = [a for a in self.atoms if a.name() in predicates]
+        clauses = [a for a in self.atoms if a.name in predicates]
         if self.opts.family == "all":
             nb_formula = count_predicate(self.atoms, "formula")
             nb_dnf = count_predicate(self.atoms, "dnf")
@@ -78,8 +114,8 @@ class ASPSample:
     def mse(self):
         cd_measured = crunch_data(self.atoms, "measured", self.opts.factor)
         cd_guessed = crunch_data(self.atoms, "guessed", self.opts.factor)
-        mse0 = MSE(cd_measured)
-        mse = MSE(cd_guessed)
+        mse0 = calculate_mse(cd_measured)
+        mse = calculate_mse(cd_guessed)
         return (mse0, mse)
 
     def network(self, hypergraph):
@@ -122,11 +158,15 @@ class ASPSolver:
         control.add("base", [], self.data)
         return control
 
-    def sample(self, first, scripts=[], weight=None):
+    def sample(self, first, scripts=(), weight=None) -> ASPSample | None:
         control = self.default_control()
         if weight:
             control.load(aspf("tolerance.lp"))
-            control.add("base", [], "#const minWeight=%s. #const maxWeight=%s" % (weight, weight))
+            control.add(
+                "base",
+                [],
+                "#const minWeight=%s. #const maxWeight=%s" % (weight, weight),
+            )
 
         control.load(aspf("showMeasured.lp"))
         if self.opts.family == "subset":
@@ -140,6 +180,8 @@ class ASPSolver:
             for model in hnd:
                 return ASPSample(self.opts, model)
 
+        return None
+
     def solution_samples(self):
         i = 1
         if self.debug:
@@ -147,7 +189,7 @@ class ASPSolver:
         s = self.sample(True)
         yield s
 
-        weight = s.weight()
+        weight = s.optimization
         fd, excludelp = tempfile.mkstemp(".lp")
         os.close(fd)
 
@@ -170,7 +212,6 @@ class ASPSolver:
         os.unlink(excludelp)
 
     def solutions(self, on_model, on_model_weight=None, limit=0, force_weight=None):
-
         control = self.default_control("0")
 
         do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
