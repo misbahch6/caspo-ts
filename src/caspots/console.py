@@ -3,31 +3,75 @@ from __future__ import print_function
 import os
 import sys
 import tempfile
+import time
+import tempfile
+from argparse import ArgumentParser
+from dataclasses import dataclass
+from typing import Optional, Literal
 
 from caspo.core import Graph, HyperGraph, LogicalNetwork, LogicalNetworkList
 from clingo.solving import Model
 
 from caspots import identify, modelchecking
-
+from .crossvar import globalvariables
 from .asputils import *
 from .dataset import *
 from .networks import *
 from .utils import *
 
+@dataclass
+class ValidateArgs:
+    pkn: str
+    dataset: str
+    networks: str
+    range_from: int = 0
+    range_length: int = 0
+    output: Optional[str] = None
+    tee: Optional[str] = None
+    semantics: str = "u_general"
+    factor: int = 100
 
+@dataclass
+class PKN2LPArgs:
+    pkn: str
+    output: str
+
+@dataclass
+class MIDAS2LPArgs:
+    pkn: str
+    dataset: str
+    output: str
+    factor: int = 100
+
+@dataclass
+class Results2LPArgs:
+    pkn: str
+    dataset: str
+    networks: str
+    range_from: int = 0
+    range_length: int = 0
+
+# TODO: the argument should be path
 def read_pkn(args):
+    if not args.pkn.endswith(".sif"):
+        raise ValueError(f"sif file expected but got {args.pkn}")
     graph = Graph.read_sif(args.pkn)
     hypergraph = HyperGraph.from_graph(graph)
+    print("I am in read_pkn")
     return graph, hypergraph
 
-
+# TODO: the argument should be path
 def dataset_name(args):
+    print("I am in dataset_name")
     return os.path.basename(args.dataset).replace(".csv", "")
 
-
+# TODO: the argument should be path, factor, graph
 def read_dataset(args, graph):
-    ds = Dataset(dataset_name(args), dfactor=args.factor)
+    if not args.dataset.endswith(".csv"):
+        raise ValueError(f"csv file expected but got {args.dataset}")
+    ds = Dataset(dataset_name(args), dfactor=getattr(args, "factor", 100))
     ds.load_from_midas(args.dataset, graph)
+    print("I am in read_dataset")
     return ds
 
 
@@ -39,6 +83,8 @@ def read_networks(args):
             end = args.range_from + args.range_length
         indexes = range(args.range_from, end)
         networks = networks[indexes]
+        print("I am in read_networks")
+
     return networks
 
 
@@ -54,13 +100,16 @@ def read_domain(args, hypergraph, dataset, outf):
 
 
 def is_true_positive(args, dataset, network):
+
     fd, smvfile = tempfile.mkstemp(".smv")
     os.close(fd)
     exact = modelchecking.verify(dataset, network, smvfile, args.semantics)
-    if args.debug:
+    if getattr(args, "debug", False):
         dbg("# %s" % smvfile)
     else:
         os.unlink(smvfile)
+    print("I am in is true_positive")
+
     return exact
 
 
@@ -69,12 +118,16 @@ def do_pkn2lp(args):
 
 
 def do_midas2lp(args):
+    print("I am in midas2lp")
+
     graph, _ = read_pkn(args)
     dataset = read_dataset(args, graph)
     funset(dataset).to_file(args.output)
 
 
 def do_results2lp(args):
+    print("I am in results2lp")
+
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
     networks = read_networks(args)
@@ -83,6 +136,7 @@ def do_results2lp(args):
 
 
 def do_mse(args):
+    print("I am in do_mse")
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
 
@@ -100,12 +154,7 @@ def do_mse(args):
         (mse0, mse) = sample.mse()
         if first:
             print("MSE_discrete = %s" % mse0)
-            # print("%s" % mse0)
-            # if mse0 == mse:
-            #   print("MSE_sample >= MSE_discrete")
-            # else:
             print("MSE_sample >= %s" % mse)
-            # print("%s" % mse)
         if args.check_exact:
             network = sample.network(hypergraph)
             trace = sample.trace(dataset)
@@ -123,7 +172,9 @@ def do_mse(args):
     os.unlink(domainlp)
 
 
-def do_identify(args):
+def do_identify(args: identify.SolverOptions):
+    print("I am in do_identify")
+
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
     termset = funset(hypergraph, dataset)
@@ -151,8 +202,6 @@ def do_identify(args):
     def on_model(model: Model):
         c["found"] += 1
         skip = False
-        # tuples = [f.arguments for f in model.symbols(shown=True) if f.name == "dnf"]
-        # print(tuples)
         tuples = []
         for f in model.symbols(atoms=True):
             if f.name == "dnf" and len(f.arguments) == 2:
@@ -178,16 +227,74 @@ def do_identify(args):
             networks.to_csv(args.output)
         os.unlink(domainlp)
 
+def do_diversify(args):
+    graph, hypergraph = read_pkn(args)
+    dataset = read_dataset(args, graph)
+    termset = funset(hypergraph, dataset)
+
+    fd, domainlp = tempfile.mkstemp(".lp")
+    os.close(fd)
+    domain = read_domain(args, hypergraph, dataset, domainlp)
+
+    identifier = identify.ASPSolver(termset, args, domain=domain)
+
+    networks = LogicalNetworkList.from_hypergraph(hypergraph)
+
+    c = {
+        "found": 0,
+        "tp": 0,
+    }
+
+    def show_stats(output=sys.stderr):
+        if args.true_positives:
+            output.write("%d solution(s) / %d true positives\r" % (c["found"], c["tp"]))
+        else:
+            output.write("%d solution(s)\r" % c["found"])
+        output.flush()
+
+    def on_model(model: Model):
+        globalvariables.numberofsol = args.limit
+        globalvariables.check = False
+        c["found"] += 1
+        mcounter = 1
+        skip = False
+        tuples = []
+        tuples = ([x.number for x in f.arguments] for f in model.symbols(shown=True) if f.name == "dnf" and len(f.arguments) == 2)
+        network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
+        if args.true_positives:
+            if is_true_positive(args, dataset, network):
+                globalvariables.check = True
+                c["tp"] += 1
+            else:
+                skip = True
+        show_stats()
+        if skip:
+            return
+        networks.append(network)
+
+    try:
+        identifier.solutions(on_model, limit=args.limit, force_weight=args.force_weight)
+    finally:
+        print("%d solution(s) for the over-approximation" % c["found"])
+        if args.true_positives and c["found"]:
+            print("%d/%d true positives [rate: %0.2f%%]" % (c["tp"], c["found"], (100.0 * c["tp"]) / c["found"]))
+        if networks:
+            networks.to_csv(args.output)
+        os.unlink(domainlp)
 
 def do_validate(args):
+    print("I am in do_validate")
+    print(args)
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
     networks = read_networks(args)
 
+    TPtime = time.time()
     tp = 0
     c = 0
     nb = len(networks)
     tp_indexes = []
+    firstTPtime = 0
     try:
         for network in networks:
             c += 1
@@ -196,151 +303,171 @@ def do_validate(args):
             if is_true_positive(args, dataset, network):
                 tp_indexes.append(c - 1)
                 tp += 1
+                if tp == 1:
+                    firstTPtime = time.time() - TPtime
+                    print("First true positive found after %0.2f seconds" % firstTPtime)
             sys.stderr.write("%d/%d true positives\r" % (tp, c))
         res = "%d/%d true positives [rate: %0.2f%%]" % (tp, nb, (100.0 * tp) / nb)
-        print(res)
+        print(res,firstTPtime)
         if args.tee:
             with open(args.tee, "w") as f:
                 f.write("%s\n" % res)
+                print("Results written to %s\n" % res)
     finally:
         if args.output and tp_indexes:
             networks[tp_indexes].to_csv(args.output)
 
 
-from argparse import ArgumentParser
 
+
+# --- Dataclasses for argument groups ---
+
+# Problem
+# - graph
+# - hypergraph
+# - dataset
+# - networks
+# - output
+# - factor
+
+# - ConsoleConfig
+#   - pkn
+#   - dataset
+#   - output
+#   - factor
+# - SolveConfig
+#   - family
+#   - mincard_tolerance
+# - ValidateConfig
+#   - range_from
+#   - range_length
+#   - semantics
+# - MSEConfig
+#   - range_from
+#   - range_length
+#   - enum_traces
+
+
+# --- Main run function ---
 
 def run():
-
     parser = ArgumentParser(prog=sys.argv[0])
-    parser.add_argument("--debug", action="store_true", default=False)
-    parser.add_argument("--debug-dir", type=str, default=tempfile.gettempdir())
-    subparsers = parser.add_subparsers(help="commands help")
+    subparsers = parser.add_subparsers(dest="command", required=True)
 
-    identify_parser = ArgumentParser(add_help=False)
-    identify_parser.add_argument(
-        "--family", choices=["all", "subset", "mincard"], default="subset", help="result family (default: subset)"
-    )
-    identify_parser.add_argument(
-        "--mincard-tolerance",
-        type=int,
-        default=0,
-        help="consider (subset minimal) solutions with cardinality at most tolerance + the minimum cardinality",
-    )
-    identify_parser.add_argument(
-        "--weight-tolerance",
-        type=int,
-        default=0,
-        help="consider (subset minimal) solutions with weight at most tolerance + the minimum weight",
-    )
-    identify_parser.add_argument("--enum-traces", action="store_true", default=False, help="enumerate over traces")
-    identify_parser.add_argument(
-        "--fully-controllable",
-        action="store_true",
-        help="only consider BNs where all nodes have a stimulus in their ancestors (default)",
-    )
-    identify_parser.add_argument(
-        "--no-fully-controllable",
-        action="store_false",
-        dest="fully_controllable",
-        help="do not only consider BNs where all nodes have a stimulus in their ancestors",
-    )
-    identify_parser.set_defaults(fully_controllable=True)
-    identify_parser.add_argument(
-        "--force-weight", type=int, default=None, help="Force the maximum weight of a solution"
-    )
-    identify_parser.add_argument("--force-size", type=int, default=None, help="Force the maximum size of a solution")
-    modelchecking_p = ArgumentParser(add_help=False)
-    modelchecking_p.add_argument(
-        "--semantics",
-        choices=modelchecking.MODES,
-        default=modelchecking.U_GENERAL,
-        help="Updating mode of the Boolean network (default: %s)" % modelchecking.U_GENERAL,
-    )
+    # identify
+    p_identify = subparsers.add_parser("identify", help="Identify Boolean networks")
+    p_identify.add_argument("pkn")
+    p_identify.add_argument("dataset")
+    p_identify.add_argument("output")
+    p_identify.add_argument("--family", choices=["all", "subset", "mincard"], default="subset")
+    p_identify.add_argument("--mincard-tolerance", type=int, default=0)
+    p_identify.add_argument("--weight-tolerance", type=int, default=0)
+    p_identify.add_argument("--enum-traces", action="store_true", default=False)
+    p_identify.add_argument("--fully-controllable", action="store_true", default=True)
+    p_identify.add_argument("--force-weight", type=int, default=None)
+    p_identify.add_argument("--force-size", type=int, default=None)
+    p_identify.add_argument("--debug", action="store_true", default=False)
+    p_identify.add_argument("--RC", type=int, default=None)
+    p_identify.add_argument("--true-positives", action="store_true", default=False)
+    p_identify.add_argument("--limit", type=int, default=0)
+    p_identify.add_argument("--semantics", default="u_general")
+    p_identify.add_argument("--range-from", type=int, default=0)
+    p_identify.add_argument("--range-length", type=int, default=0)
+    p_identify.add_argument("--networks", default=None)
+    p_identify.add_argument("--factor", type=int, default=100)
 
-    pkn_parser = ArgumentParser(add_help=False)
-    pkn_parser.add_argument("pkn", help="Prior knowledge network (sif format)")
-    dataset_parser = ArgumentParser(add_help=False)
-    dataset_parser.add_argument("dataset", help="Dataset (midas csv format)")
-    dataset_parser.add_argument("--factor", type=int, default=100, help="discretization factor (default: 100)")
+    # diversify
+    p_diversify = subparsers.add_parser("diversify", help="Diversify Boolean networks")
+    p_diversify.add_argument("pkn")
+    p_diversify.add_argument("dataset")
+    p_diversify.add_argument("output")
+    p_diversify.add_argument("--diversify", type=int, default=0)
+    p_diversify.add_argument("--true-positives", action="store_true", default=False)
+    p_diversify.add_argument("--limit", type=int, default=0)
+    p_diversify.add_argument("--semantics", default="u_general")
+    p_diversify.add_argument("--range-from", type=int, default=0)
+    p_diversify.add_argument("--range-length", type=int, default=0)
+    p_diversify.add_argument("--networks", default=None)
+    p_diversify.add_argument("--factor", type=int, default=100)
 
-    networks_parser = ArgumentParser(add_help=False)
-    networks_parser.add_argument(
-        "--range-from", type=int, default=0, help="Validate only networks from given row (starting at 0)"
-    )
-    networks_parser.add_argument(
-        "--range-length", type=int, default=0, help="Number of networks to validate (0 means all)"
-    )
+    # validate
+    p_validate = subparsers.add_parser("validate", help="Validate networks")
+    p_validate.add_argument("pkn")
+    p_validate.add_argument("dataset")
+    p_validate.add_argument("networks")
+    p_validate.add_argument("--range-from", type=int, default=0)
+    p_validate.add_argument("--range-length", type=int, default=0)
+    p_validate.add_argument("--output", default=None)
+    p_validate.add_argument("--tee", default=None)
+    p_validate.add_argument("--semantics", default="u_general")
+    p_validate.add_argument("--factor", type=int, default=100)
 
-    domain_parser = ArgumentParser(add_help=False, parents=[networks_parser])
-    domain_parser.add_argument("--networks", help="Networks to as domain (.csv)")
+    # mse - only pkn and dataset are positional; networks is required
+    p_mse = subparsers.add_parser("mse", help="Compute MSE")
+    p_mse.add_argument("pkn")
+    p_mse.add_argument("dataset")
+    p_mse.add_argument("--networks", required=True, help="Networks file (.csv format)")
+    p_mse.add_argument("--family", choices=["all", "subset", "mincard"], default="subset")
+    p_mse.add_argument("--mincard-tolerance", type=int, default=0)
+    p_mse.add_argument("--weight-tolerance", type=int, default=0)
+    p_mse.add_argument("--enum-traces", action="store_true", default=False)
+    p_mse.add_argument("--fully-controllable", action="store_true", default=True)
+    p_mse.add_argument("--force-weight", type=int, default=None)
+    p_mse.add_argument("--force-size", type=int, default=None)
+    p_mse.add_argument("--debug", action="store_true", default=False)
+    p_mse.add_argument("--RC", type=int, default=None)
+    p_mse.add_argument("--check-exact", action="store_true", default=False)
+    p_mse.add_argument("--semantics", default="u_general")
+    p_mse.add_argument("--range-from", type=int, default=0)
+    p_mse.add_argument("--range-length", type=int, default=0)
+    p_mse.add_argument("--factor", type=int, default=100)
 
-    parser_pkn2lp = subparsers.add_parser(
-        "pkn2lp", help="Export PKN (sif format) to ASP (lp format)", parents=[pkn_parser]
-    )
-    parser_pkn2lp.add_argument("output", help="Output file (.lp format)")
-    parser_pkn2lp.set_defaults(func=do_pkn2lp)
+    # pkn2lp
+    p_pkn2lp = subparsers.add_parser("pkn2lp", help="Export PKN to ASP")
+    p_pkn2lp.add_argument("pkn")
+    p_pkn2lp.add_argument("output")
 
-    parser_midas2lp = subparsers.add_parser(
-        "midas2lp", help="Export dataset (midas csv format) to ASP (lp format)", parents=[pkn_parser, dataset_parser]
-    )
-    parser_midas2lp.add_argument("output", help="Output file (.lp format)")
-    parser_midas2lp.set_defaults(func=do_midas2lp)
+    # midas2lp
+    p_midas2lp = subparsers.add_parser("midas2lp", help="Export dataset to ASP")
+    p_midas2lp.add_argument("pkn")
+    p_midas2lp.add_argument("dataset")
+    p_midas2lp.add_argument("output")
+    p_midas2lp.add_argument("--factor", type=int, default=100)
 
-    parser_results2lp = subparsers.add_parser(
-        "results2lp", help="Export results to ASP (lp format)", parents=[pkn_parser, dataset_parser, networks_parser]
-    )
-    parser_results2lp.add_argument("networks", help="Networks file (.csv format)")
-    parser_results2lp.set_defaults(func=do_results2lp)
+    # results2lp
+    p_results2lp = subparsers.add_parser("results2lp", help="Export results to ASP")
+    p_results2lp.add_argument("pkn")
+    p_results2lp.add_argument("dataset")
+    p_results2lp.add_argument("networks")
+    p_results2lp.add_argument("--range-from", type=int, default=0)
+    p_results2lp.add_argument("--range-length", type=int, default=0)
 
-    parser_mse = subparsers.add_parser(
-        "mse",
-        help="Compute the best MSE",
-        parents=[pkn_parser, dataset_parser, identify_parser, modelchecking_p, domain_parser],
-    )
-    parser_mse.add_argument(
-        "--check-exact", action="store_true", default=False, help="look for a true positive with the computed MSE"
-    )
-    parser_mse.set_defaults(func=do_mse)
+    ns = parser.parse_args()
 
-    parser_identify = subparsers.add_parser(
-        "identify",
-        help="Identify all the best Boolean networks",
-        parents=[pkn_parser, dataset_parser, identify_parser, modelchecking_p, domain_parser],
-    )
-    parser_identify.add_argument(
-        "--true-positives",
-        default=False,
-        action="store_true",
-        help="filter solutions to keep only true positives (exact identification)",
-    )
-    parser_identify.add_argument("--limit", default=0, type=int, help="Limit the number of solutions")
-    parser_identify.add_argument("output", help="output file (csv format)")
-    parser_identify.set_defaults(func=do_identify)
+    def from_namespace(cls, ns):
+        # Get dataclass field names
+        field_names = cls.__dataclass_fields__.keys()
+        # Build args dict from ns if attribute exists
+        args = {name: getattr(ns, name) for name in field_names if hasattr(ns, name)}
+        return cls(**args)
 
-    parser_validate = subparsers.add_parser(
-        "validate",
-        help="Compute the true positive rate of *exactly* identified networks",
-        parents=[pkn_parser, dataset_parser, modelchecking_p],
-    )
-    parser_validate.add_argument(
-        "--range-from", type=int, default=0, help="Validate only networks from given row (starting at 0)"
-    )
-    parser_validate.add_argument(
-        "--range-length", type=int, default=0, help="Number of networks to validate (0 means all)"
-    )
-    parser_validate.add_argument("--output", help="output true positive network to file (csv format)")
-    parser_validate.add_argument(
-        "--tee", type=str, default=None, help="Output result to given file (in addition to stdout)."
-    )
-    parser_validate.add_argument("networks", help="network set (csv format)")
-    parser_validate.set_defaults(func=do_validate)
+    # Convert Namespace to the appropriate dataclass
+    if ns.command == "identify":
+        do_identify(from_namespace(identify.SolverOptions, ns))
+    elif ns.command == "diversify":
+        do_diversify(from_namespace(identify.SolverOptions, ns))
+    elif ns.command == "validate":
+        do_validate(from_namespace(ValidateArgs, ns))
+    elif ns.command == "mse":
+        do_mse(from_namespace(identify.SolverOptions, ns))
+    elif ns.command == "pkn2lp":
+        do_pkn2lp(from_namespace(PKN2LPArgs, ns))
+    elif ns.command == "midas2lp":
+        do_midas2lp(from_namespace(MIDAS2LPArgs, ns))
+    elif ns.command == "results2lp":
+        do_results2lp(from_namespace(Results2LPArgs, ns))
+    else:
+        parser.error("Unknown command")
 
-    args = parser.parse_args()
-    # print("#### OPTIONS ######")
-    # for k,v in args._get_kwargs():
-    # if k in ["func"]:
-    # continue
-    # print("# %s = %s" % (k,v))
-    # print("###################")
-    args.func(args)
+if __name__ == "__main__":
+    run()

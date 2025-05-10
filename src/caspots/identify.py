@@ -9,11 +9,15 @@ calculation, and ASP-based problem solving.
 - Runs an ASP solver to generate and iterate over solutions.
 """
 
+from dataclasses import dataclass
 import math
+from math import log
 import os
 import tempfile
 import time
-from typing import Any, Callable, Iterator, Sequence
+import random
+from typing import Any, Callable, Iterator, Literal, Optional, Sequence
+from pprint import pprint
 
 from caspo.core import Dataset, LogicalNetwork
 from caspo.core.hypergraph import HyperGraph
@@ -22,11 +26,37 @@ from clingo.control import Control
 from clingo.solving import Model
 from clingo.symbol import Function, Symbol
 
-from caspots.asputils import funset
-from caspots.config import aspf
-from caspots.utils import dbg
+from .asputils import funset
+from .config import aspf
+from .utils import dbg
+from .crossvar import globalvariables
 
 CrunchedData = tuple[set[tuple[Symbol]], dict[str, dict[tuple[Symbol], float]]]
+
+@dataclass
+class SolverOptions:
+    pkn: str
+    dataset: str
+    output: Optional[str] = None
+    family: Literal["all", "subset", "mincard"] = "subset"
+    mincard_tolerance: int = 0
+    weight_tolerance: int = 0
+    enum_traces: bool = False
+    fully_controllable: bool = True
+    force_weight: Optional[int] = None
+    force_size: Optional[int] = None
+    debug: bool = False
+    RC: Optional[int] = None
+    true_positives: bool = False
+    limit: int = 0
+    semantics: str = "u_general"
+    range_from: int = 0
+    range_length: int = 0
+    networks: Optional[str] = None
+    diversify: int = 0
+    check_exact: bool = False
+    factor: int = 100
+
 
 
 def crunch_data(answer: Sequence[Symbol], predicate: str, factor: float) -> CrunchedData:
@@ -56,6 +86,8 @@ def crunch_data(answer: Sequence[Symbol], predicate: str, factor: float) -> Crun
             t = "obs" if p == "obs" else "bin"
             data[t][key] = val
             keys.add(key)
+    print("I am in crunch_data")
+
     return keys, data
 
 
@@ -78,6 +110,8 @@ def calculate_mse(cd: CrunchedData) -> float:
             continue
         n += 1
         cum += (data["obs"][key] - data["bin"][key]) ** 2
+    print("I am in calculate_mse")
+
     return math.sqrt(cum / n)
 
 
@@ -92,6 +126,8 @@ def count_predicate(answer: Sequence[Symbol], predicate: str) -> int:
     Returns:
         Number of Symbols with matching predicate name.
     """
+    print("I am in count_predicate")
+
     return sum(1 for a in answer if a.name == predicate)
 
 
@@ -107,7 +143,7 @@ class ASPSample:
     atoms: Sequence[Symbol]
     optimization: Sequence[int]
 
-    def __init__(self, opts, model: Model):
+    def __init__(self, opts: SolverOptions, model: Model):
         """
         Initialize ASPSample with options and ASP model.
 
@@ -139,6 +175,7 @@ class ASPSample:
                 "%d{dnf(I,J): hyper(I,J,N)}%d" % (nb_dnf, nb_dnf),
                 "%d{clause(J,V,B): edge(J,V,B)}%d" % (nb_clause, nb_clause),
             ]
+        print("I am in asp_exclusion")
         return f":- {', '.join(map(str, clauses))}."
 
     def mse(self) -> tuple[float, float]:
@@ -152,6 +189,8 @@ class ASPSample:
         cd_guessed = crunch_data(self.atoms, "guessed", self.opts.factor)
         mse0 = calculate_mse(cd_measured)
         mse = calculate_mse(cd_guessed)
+        print("I am in mse")
+
         return (mse0, mse)
 
     def network(self, hypergraph: HyperGraph) -> LogicalNetwork:
@@ -164,6 +203,8 @@ class ASPSample:
         Returns:
             LogicalNetwork object constructed from the sample's atoms.
         """
+        print("I am in network")
+
         tuples = (tuple(arg.number for arg in f.arguments) for f in self.atoms if f.match("dnf", 2))
         return LogicalNetwork.from_hypertuples(hypergraph, tuples)
 
@@ -186,6 +227,7 @@ class ASPSample:
                 if dataset.experiments[eid].obs[t][node] != value:
                     # print(((eid,t,node),dataset.experiments[eid].obs[t][node], value), file=sys.stderr)
                     dataset.experiments[eid].obs[t][node] = value
+        print("I am in trace")
         return dataset
 
 
@@ -244,6 +286,7 @@ class ASPSolver:
         control.load(aspf("supportConsistency.lp"))
         control.load(aspf("normalize.lp"))
         control.add("base", [], self.data)
+        print("I am in default_control")
         return control
 
     def sample(self, first: bool, scripts: Sequence[str] = (), weight: int | None = None) -> ASPSample | None:
@@ -264,7 +307,7 @@ class ASPSolver:
             control.add(
                 "base",
                 [],
-                f"#const minWeight={weight}. #const maxWeight={weight}",
+                f"#const minWeight={weight}. [override] #const maxWeight={weight}. [override]",
             )
 
         control.load(aspf("showMeasured.lp"))
@@ -278,6 +321,7 @@ class ASPSolver:
         with control.solve(yield_=True) as hnd:
             for model in hnd:
                 return ASPSample(self.opts, model)
+        print("I am in sample")
 
         return None
 
@@ -289,6 +333,7 @@ class ASPSolver:
             Solution samples for the ASP problem.
         """
         i = 1
+        print("# I am in solution_samples")
         if self.debug:
             dbg(f"# model {i}")
         s = self.sample(True)
@@ -423,3 +468,4 @@ class ASPSolver:
         dbg("# begin enumeration")
         control.solve(on_model=on_model)
         dbg(f"# enumeration took {time.time() - start}")
+        print("I am in solutions")
