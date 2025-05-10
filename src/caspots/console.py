@@ -318,38 +318,6 @@ def do_validate(args):
             networks[tp_indexes].to_csv(args.output)
 
 
-
-
-# --- Dataclasses for argument groups ---
-
-# Problem
-# - graph
-# - hypergraph
-# - dataset
-# - networks
-# - output
-# - factor
-
-# - ConsoleConfig
-#   - pkn
-#   - dataset
-#   - output
-#   - factor
-# - SolveConfig
-#   - family
-#   - mincard_tolerance
-# - ValidateConfig
-#   - range_from
-#   - range_length
-#   - semantics
-# - MSEConfig
-#   - range_from
-#   - range_length
-#   - enum_traces
-
-
-# --- Main run function ---
-
 def run():
     parser = ArgumentParser(prog=sys.argv[0])
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -451,23 +419,20 @@ def run():
         args = {name: getattr(ns, name) for name in field_names if hasattr(ns, name)}
         return cls(**args)
 
-    # Convert Namespace to the appropriate dataclass
-    if ns.command == "identify":
-        do_identify(from_namespace(identify.SolverOptions, ns))
-    elif ns.command == "diversify":
-        do_diversify(from_namespace(identify.SolverOptions, ns))
-    elif ns.command == "validate":
-        do_validate(from_namespace(ValidateArgs, ns))
-    elif ns.command == "mse":
-        do_mse(from_namespace(identify.SolverOptions, ns))
-    elif ns.command == "pkn2lp":
-        do_pkn2lp(from_namespace(PKN2LPArgs, ns))
-    elif ns.command == "midas2lp":
-        do_midas2lp(from_namespace(MIDAS2LPArgs, ns))
-    elif ns.command == "results2lp":
-        do_results2lp(from_namespace(Results2LPArgs, ns))
-    else:
+    dispatch = {
+        "identify": (do_identify, identify.SolverOptions),
+        "diversify": (do_diversify, identify.SolverOptions),
+        "validate": (do_validate, ValidateArgs),
+        "mse": (do_mse, identify.SolverOptions),
+        "pkn2lp": (do_pkn2lp, PKN2LPArgs),  
+        "midas2lp": (do_midas2lp, MIDAS2LPArgs),
+        "results2lp": (do_results2lp, Results2LPArgs),
+    }
+
+    if ns.command not in dispatch:
         parser.error("Unknown command")
+    do_command, args_cls = dispatch[ns.command]
+    do_command(from_namespace(args_cls, ns))
 
 if __name__ == "__main__":
     run()
