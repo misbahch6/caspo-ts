@@ -385,10 +385,6 @@ class ASPSolver:
 
         do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
         do_subsets = self.opts.family == "subset" or (self.opts.family == "mincard" and self.opts.mincard_tolerance)
-        # FIXME: The code involving minsize seems broken. Without the statement
-        # below, minsize would be unbound in some cases. It only gets set for
-        # very specific options.
-        minsize = 0
 
         parts.append(("minimize_weight", []))
         if do_mincard:
@@ -396,8 +392,15 @@ class ASPSolver:
 
         start = time.time()
 
+        def maxsize(size):
+            if self.opts.force_size:
+                return self.opts.force_size
+            return size + self.opts.mincard_tolerance
+
         if force_weight is not None:
             parts.append(("fix_weight", [Number(force_weight), Number(force_weight)]))
+            if do_mincard:
+                parts.append(("fix_size", [Number(force_weight), Number(maxsize(force_weight))]))
         control.ground(parts)
 
         if force_weight is None:
@@ -410,14 +413,15 @@ class ASPSolver:
             dbg(f"# optimizations = {optimizations}")
 
             weight = optimizations[0]
-            if do_mincard:
-                minsize = optimizations[1]
             if weight > 0 and on_model_weight is not None:
                 for sample in self.solution_samples():
                     on_model_weight(sample)
                 return
-            max_weight = weight + self.opts.weight_tolerance
-            control.ground([("fix_weight", [Number(weight), Number(max_weight)])])
+
+            parts = [("fix_weight", [Number(weight), Number(weight + self.opts.weight_tolerance)])]
+            if do_mincard:
+                parts.append(("fix_size", [Number(optimizations[1]), Number(maxsize(optimizations[1]))]))
+            control.ground(parts)
 
         solve_opts = control.configuration.solve
         solver_opts = control.configuration.solver
@@ -436,13 +440,6 @@ class ASPSolver:
         else:
             # project on shown atoms: dnf, clause, formula
             solve_opts.project = 1
-
-        if do_mincard:
-            if self.opts.force_size:
-                maxsize = self.opts.force_size
-            else:
-                maxsize = minsize + self.opts.mincard_tolerance
-            control.ground([("minSize", [Number(minsize), Number(maxsize)])])
 
         start = time.time()
         dbg("# begin enumeration")
