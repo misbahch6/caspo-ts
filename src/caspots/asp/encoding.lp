@@ -1,37 +1,7 @@
 #const maxsize = -1.
-#const maxrss = -1.
-#const minErrors=#infimum.
-#const maxErrors=#supremum.
-#const minSize=#infimum.
-#const maxSize=#supremum.
-#const minWeight=#infimum.
-#const maxWeight=#supremum.
+% #const maxrss = -1.
 
 #program base.
-
-%% bn generation
-
-% guess a formula compatible with the pkn for each node
-formula(V,I)              :- node(V,I); hyper(I,_,_).
-{dnf(I,J) : hyper(I,J,N)} :- formula(V,I).
-clause(J,V,S)             :- edge(J,V,S); dnf(_,J).
-
-% paths derived from the guess Boolean network
-path(U,V) :- formula(V,I); dnf(I,J); edge(J,U,_).
-path(U,V) :- path(U,W); path(W,V).
-
-% J2 subsumed by J1
-:- formula(V,I); hyper(I,J1,N); hyper(I,J2,M); N < M,
-   dnf(I,J1);  dnf(I,J2); clause(J2,U,S) : clause(J1,U,S).
-
-% contradictions
-:- formula(V,I); dnf(I,J); edge(J,U,S); edge(J,U,-S).
-
-% V is not leading to any readout (non-observable)
-:- path(_,V); not readout(V); not path(V,U) : readout(U).
-
-:- maxsize + 1 #sum {L,I,J : dnf(I,J) , hyper(I,J,L) }; maxsize >= 0.
-%:- maxrss + 1 #sum {W,E,V,S : not eval(E,V,-S) , obs(E,V,D) , rss(D,V,S,W) }; maxrss >= 0.
 
 %% data normalization
 
@@ -68,7 +38,7 @@ toGuess(E,T,S) :- obs(E,T,S,X).
 %i have to have the same precondition (time 0) in all experiments
 :- unobsSpec(E1,0,S), unobsSpec(E2,0,S), E1 < E2, measured(E1,0,S,V), not measured(E2,0,S,V).
 
-#program support_consistency.
+%% support consistency
 
 supp(E,T,L,V) :- guessed(E,T,L,V), nextTP(E,T,_).
 convert(-1,0).
@@ -96,6 +66,30 @@ supp(E,T,L,X) :- ex_supp(E,T,L,X).
 :- guessed(E,T2,S,V), not supp(E,T1,S,V), nextTP(E,T1,T2).
 :- guessed(E,T2,L,Y), opposite(X,Y), ex_supp(E,T1,L,X), not ex_supp(E,T1,L,Y), nextTP(E,T1,T2).
 
+#program guess_bn.
+
+% guess a formula compatible with the pkn for each node
+formula(V,I)              :- node(V,I); hyper(I,_,_).
+{dnf(I,J) : hyper(I,J,N)} :- formula(V,I).
+clause(J,V,S)             :- edge(J,V,S); dnf(_,J).
+
+% paths derived from the guess Boolean network
+path(U,V) :- formula(V,I); dnf(I,J); edge(J,U,_).
+path(U,V) :- path(U,W); path(W,V).
+
+% J2 subsumed by J1
+:- formula(V,I); hyper(I,J1,N); hyper(I,J2,M); N < M,
+   dnf(I,J1);  dnf(I,J2); clause(J2,U,S) : clause(J1,U,S).
+
+% contradictions
+:- formula(V,I); dnf(I,J); edge(J,U,S); edge(J,U,-S).
+
+% V is not leading to any readout (non-observable)
+:- path(_,V); not readout(V); not path(V,U) : readout(U).
+
+:- maxsize + 1 #sum {L,I,J : dnf(I,J) , hyper(I,J,L) }; maxsize >= 0.
+%:- maxrss + 1 #sum {W,E,V,S : not eval(E,V,-S) , obs(E,V,D) , rss(D,V,S,W) }; maxrss >= 0.
+
 #program guess_bn_controllable.
 
 % V is not reached by any stimulus (non-controllable)
@@ -116,15 +110,16 @@ supp(E,T,L,X) :- ex_supp(E,T,L,X).
 
 #minimize{L@1,I,J : dnf(I,J) , hyper(I,J,L)}.
 
+#program fix_size(minSize, maxSize).
+
+:- not minSize #sum {L,I,J : dnf(I,J) , hyper(I,J,L)} maxSize.
+
 #program minimize_weight.
 
 #minimize {Erg@2,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50}.
 #minimize {Erg@2,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50}.
 
-#program tolerance.
-:- not minSize #sum {L,I,J : dnf(I,J) , hyper(I,J,L)} maxSize.
-
-:- not minErrors #sum {1,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S)} maxErrors.
+#program fix_weight(minWeight, maxWeight).
 :- not minWeight #sum {Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50;
                        Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50} maxWeight.
 

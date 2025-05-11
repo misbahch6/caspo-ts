@@ -9,55 +9,53 @@ calculation, and ASP-based problem solving.
 - Runs an ASP solver to generate and iterate over solutions.
 """
 
-from dataclasses import dataclass
 import math
-from math import log
 import os
 import tempfile
 import time
-import random
-from typing import Any, Callable, Iterator, Literal, Optional, Sequence
-from pprint import pprint
+from dataclasses import dataclass
+from typing import Callable, Iterator, Literal, Sequence
 
 from caspo.core import Dataset, LogicalNetwork
 from caspo.core.hypergraph import HyperGraph
-from clingo import Configuration
+from clingo import Configuration, Number
 from clingo.control import Control
 from clingo.solving import Model
-from clingo.symbol import Function, Symbol
+from clingo.symbol import Symbol
 
 from .asputils import funset
 from .config import aspf
 from .utils import dbg
-from .crossvar import globalvariables
 
 CrunchedData = tuple[set[tuple[Symbol]], dict[str, dict[tuple[Symbol], float]]]
+
 
 @dataclass
 class SolverOptions:
     pkn: str
     dataset: str
-    output: Optional[str] = None
+    output: str | None = None
     family: Literal["all", "subset", "mincard"] = "subset"
     mincard_tolerance: int = 0
     weight_tolerance: int = 0
     enum_traces: bool = False
     fully_controllable: bool = True
-    force_weight: Optional[int] = None
-    force_size: Optional[int] = None
+    force_weight: int | None = None
+    force_size: int | None = None
     debug: bool = False
-    RC: Optional[int] = None
+    RC: int | None = None
     true_positives: bool = False
     limit: int = 0
     semantics: str = "u_general"
     range_from: int = 0
     range_length: int = 0
-    networks: Optional[str] = None
+    networks: str | None = None
     diversify: int = 0
     check_exact: bool = False
     factor: int = 100
 
-#--------------These are data processing functions-----------------
+
+# --------------These are data processing functions-----------------
 def crunch_data(answer: Sequence[Symbol], predicate: str, factor: float) -> CrunchedData:
     """
     Process and organize data from Symbols into 'obs' and 'bin' categories.
@@ -128,13 +126,16 @@ def count_predicate(answer: Sequence[Symbol], predicate: str) -> int:
     print("I am in count_predicate")
 
     return sum(1 for a in answer if a.name == predicate)
-#---------------------------------------------------------------
+
+
+# ---------------------------------------------------------------
+
 
 # -----------------ASPSample class is used to handle one solution-----------------
 class ASPSample:
     """
-    Defines the ASPSample class and related helper functions 
-     for handling the output of Answer Set Programming (ASP) solvers 
+    Defines the ASPSample class and related helper functions
+     for handling the output of Answer Set Programming (ASP) solvers
      in the context of Boolean network inference.
 
     Attributes:
@@ -159,7 +160,7 @@ class ASPSample:
 
     def asp_exclusion(self) -> str:
         """
-        Produces an ASP constraint to exclude the current solution 
+        Produces an ASP constraint to exclude the current solution
         from future searches (for solution enumeration).
 
         Returns:
@@ -183,7 +184,7 @@ class ASPSample:
 
     def mse(self) -> tuple[float, float]:
         """
-        Calculates the mean squared error (MSE) between 
+        Calculates the mean squared error (MSE) between
         observed and predicted (guessed) data in the sample.
         Returns:
             Tuple of (MSE for measured data, MSE for guessed data).
@@ -198,7 +199,7 @@ class ASPSample:
 
     def network(self, hypergraph: HyperGraph) -> LogicalNetwork:
         """
-        Constructs a LogicalNetwork object from the sample, 
+        Constructs a LogicalNetwork object from the sample,
         representing the inferred Boolean network.
 
         Args:
@@ -233,7 +234,10 @@ class ASPSample:
                     dataset.experiments[eid].obs[t][node] = value
         print("I am in trace")
         return dataset
-#---------------------------------------------------------------
+
+
+# ---------------------------------------------------------------
+
 
 # -----------------ASPSolver class is used to solve ASP problems-----------------
 class ASPSolver:
@@ -252,7 +256,7 @@ class ASPSolver:
     data: str
     opts: SolverOptions
     debug: bool
-    domain: list[str]
+    domain: str | None
 
     def __init__(self, termset: funset, opts: SolverOptions, domain: str | None):
         """
@@ -267,14 +271,9 @@ class ASPSolver:
         self.data = termset.to_str()
         self.opts = opts
         self.debug = opts.debug
-        if domain is None:
-            self.domain = [aspf("guessBN.lp")]
-            if opts.fully_controllable:
-                self.domain.append(aspf("guessBN-controllable.lp"))
-        else:
-            self.domain = [domain]
+        self.domain = domain
 
-    def default_control(self, *args: str) -> Control:
+    def default_control(self, *args: str) -> tuple[Control, list[tuple[str, list[Symbol]]]]:
         """
         Create a default Control object for ASP solving.
 
@@ -285,13 +284,18 @@ class ASPSolver:
             Configured Control object for ASP solving.
         """
         control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
-        for f in self.domain:
-            control.load(f)
-        control.load(aspf("supportConsistency.lp"))
-        control.load(aspf("normalize.lp"))
+        control.load(aspf("encoding.lp"))
+        parts: list[tuple[str, list[Symbol]]] = [("base", [])]
+        if self.domain is None:
+            parts.append(("guess_bn", []))
+            if self.opts.fully_controllable:
+                parts.append(("guess_bn_controllable", []))
+        else:
+            control.load(self.domain)
+
         control.add("base", [], self.data)
         print("I am in default_control")
-        return control
+        return control, parts
 
     def sample(self, first: bool, scripts: Sequence[str] = (), weight: int | None = None) -> ASPSample | None:
         """
@@ -305,22 +309,17 @@ class ASPSolver:
         Returns:
             A sample solution or None if no solution found.
         """
-        control = self.default_control()
+        control, parts = self.default_control()
         if weight is not None:
-            control.load(aspf("tolerance.lp"))
-            control.add(
-                "base",
-                [],
-                f"#const minWeight={weight}. [override] #const maxWeight={weight}. [override]",
-            )
+            parts.append(("fix_weight", [Number(weight), Number(weight)]))
 
         if self.opts.family == "subset":
-            control.load(aspf("minimizeSizeOnly.lp"))
+            parts.append(("minimize_size", []))
         if first:
-            control.load(aspf("minimizeWeightOnly.lp"))
+            parts.append(("minimize_weight", []))
         for f in scripts:
             control.load(f)
-        control.ground([("base", [])])
+        control.ground(parts)
         with control.solve(yield_=True) as hnd:
             for model in hnd:
                 return ASPSample(self.opts, model)
@@ -382,7 +381,7 @@ class ASPSolver:
             limit: Maximum number of models to find.
             force_weight: Force a specific weight for solutions.
         """
-        control = self.default_control("0")
+        control, parts = self.default_control("0")
 
         do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
         do_subsets = self.opts.family == "subset" or (self.opts.family == "mincard" and self.opts.mincard_tolerance)
@@ -391,13 +390,15 @@ class ASPSolver:
         # very specific options.
         minsize = 0
 
-        control.load(aspf("minimizeWeightOnly.lp"))
+        parts.append(("minimize_weight", []))
         if do_mincard:
-            control.load(aspf("minimizeSizeOnly.lp"))
-
-        control.ground([("base", [])])
+            parts.append(("minimize_size", []))
 
         start = time.time()
+
+        if force_weight is not None:
+            parts.append(("fix_weight", [Number(force_weight), Number(force_weight)]))
+        control.ground(parts)
 
         if force_weight is None:
             dbg("# start initial solving")
@@ -415,24 +416,8 @@ class ASPSolver:
                 for sample in self.solution_samples():
                     on_model_weight(sample)
                 return
-        else:
-            weight = force_weight
-            dbg(f"# force weight = {weight}")
-
-        # NOTE: maybe not set a lower bound for the weight
-        # TODO: can be added to the encoding with a parametrized program
-        max_weight = weight + self.opts.weight_tolerance
-        control.add(
-            "minWeight",
-            [],
-            ":- not "
-            + str(weight)
-            + " #sum {Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50;"
-            + " Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50} "
-            + str(max_weight)
-            + " .",
-        )
-        control.ground([("minWeight", [])])
+            max_weight = weight + self.opts.weight_tolerance
+            control.ground([("fix_weight", [Number(weight), Number(max_weight)])])
 
         solve_opts = control.configuration.solve
         solver_opts = control.configuration.solver
@@ -442,7 +427,7 @@ class ASPSolver:
         solve_opts.opt_mode = "ignore"
         solve_opts.models = limit
         if do_subsets:
-            # this configures the heuristic to make shown atoms false 
+            # this configures the heuristic to make shown atoms false
             # before assigning any other atoms
             solver_opts.heuristic = "Domain"
             solver_opts.dom_mod = "5,16"
@@ -457,16 +442,13 @@ class ASPSolver:
                 maxsize = self.opts.force_size
             else:
                 maxsize = minsize + self.opts.mincard_tolerance
-            control.add(
-                "minSize",
-                [],
-                ":- not " + str(minsize) + " #sum {L,I,J : dnf(I,J) , hyper(I,J,L)} " + str(maxsize) + ".",
-            )
-            control.ground([("minSize", [])])
+            control.ground([("minSize", [Number(minsize), Number(maxsize)])])
 
         start = time.time()
         dbg("# begin enumeration")
         control.solve(on_model=on_model)
         dbg(f"# enumeration took {time.time() - start}")
         print("I am in solutions")
-#---------------------------------------
+
+
+# ---------------------------------------

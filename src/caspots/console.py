@@ -4,20 +4,21 @@ import os
 import sys
 import tempfile
 import time
-import tempfile
 from argparse import ArgumentParser
 from dataclasses import dataclass
-from typing import Optional, Literal
+from typing import Literal, Optional
 
 from caspo.core import Graph, HyperGraph, LogicalNetwork, LogicalNetworkList
 from clingo.solving import Model
 
 from caspots import identify, modelchecking
-from .crossvar import globalvariables
+
 from .asputils import *
+from .crossvar import globalvariables
 from .dataset import *
 from .networks import *
 from .utils import *
+
 
 @dataclass
 class ValidateArgs:
@@ -31,10 +32,12 @@ class ValidateArgs:
     semantics: str = "u_general"
     factor: int = 100
 
+
 @dataclass
 class PKN2LPArgs:
     pkn: str
     output: str
+
 
 @dataclass
 class MIDAS2LPArgs:
@@ -43,6 +46,7 @@ class MIDAS2LPArgs:
     output: str
     factor: int = 100
 
+
 @dataclass
 class Results2LPArgs:
     pkn: str
@@ -50,6 +54,7 @@ class Results2LPArgs:
     networks: str
     range_from: int = 0
     range_length: int = 0
+
 
 # TODO: the argument should be path
 def read_pkn(args):
@@ -60,10 +65,12 @@ def read_pkn(args):
     print("I am in read_pkn")
     return graph, hypergraph
 
+
 # TODO: the argument should be path
 def dataset_name(args):
     print("I am in dataset_name")
     return os.path.basename(args.dataset).replace(".csv", "")
+
 
 # TODO: the argument should be path, factor, graph
 def read_dataset(args, graph):
@@ -100,7 +107,6 @@ def read_domain(args, hypergraph, dataset, outf):
 
 
 def is_true_positive(args, dataset, network):
-
     fd, smvfile = tempfile.mkstemp(".smv")
     os.close(fd)
     exact = modelchecking.verify(dataset, network, smvfile, args.semantics)
@@ -227,6 +233,7 @@ def do_identify(args: identify.SolverOptions):
             networks.to_csv(args.output)
         os.unlink(domainlp)
 
+
 def do_diversify(args):
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
@@ -259,7 +266,11 @@ def do_diversify(args):
         mcounter = 1
         skip = False
         tuples = []
-        tuples = ([x.number for x in f.arguments] for f in model.symbols(atoms=True) if f.name == "dnf" and len(f.arguments) == 2)
+        tuples = (
+            [x.number for x in f.arguments]
+            for f in model.symbols(atoms=True)
+            if f.name == "dnf" and len(f.arguments) == 2
+        )
         network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
         if args.true_positives:
             if is_true_positive(args, dataset, network):
@@ -281,6 +292,7 @@ def do_diversify(args):
         if networks:
             networks.to_csv(args.output)
         os.unlink(domainlp)
+
 
 def do_validate(args):
     print("I am in do_validate")
@@ -308,7 +320,7 @@ def do_validate(args):
                     print("First true positive found after %0.2f seconds" % firstTPtime)
             sys.stderr.write("%d/%d true positives\r" % (tp, c))
         res = "%d/%d true positives [rate: %0.2f%%]" % (tp, nb, (100.0 * tp) / nb)
-        print(res,firstTPtime)
+        print(res, firstTPtime)
         if args.tee:
             with open(args.tee, "w") as f:
                 f.write("%s\n" % res)
@@ -424,7 +436,7 @@ def run():
         "diversify": (do_diversify, identify.SolverOptions),
         "validate": (do_validate, ValidateArgs),
         "mse": (do_mse, identify.SolverOptions),
-        "pkn2lp": (do_pkn2lp, PKN2LPArgs),  
+        "pkn2lp": (do_pkn2lp, PKN2LPArgs),
         "midas2lp": (do_midas2lp, MIDAS2LPArgs),
         "results2lp": (do_results2lp, Results2LPArgs),
     }
@@ -433,6 +445,7 @@ def run():
         parser.error("Unknown command")
     do_command, args_cls = dispatch[ns.command]
     do_command(from_namespace(args_cls, ns))
+
 
 if __name__ == "__main__":
     run()
