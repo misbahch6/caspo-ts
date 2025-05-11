@@ -39,3 +39,14 @@ path(U,V) :- path(U,W); path(W,V).
 
 :- maxsize + 1 #sum {L,I,J : dnf(I,J) , hyper(I,J,L) }; maxsize >= 0.
 %:- maxrss + 1 #sum {W,E,V,S : not eval(E,V,-S) , obs(E,V,D) , rss(D,V,S,W) }; maxrss >= 0.
+
+%#heuristic dnf(X,Y). [1,false]
+%#heuristic formula(X,Y). [1,false]
+%#heuristic clause(X,Y,Z). [1,false]
+%#heuristic measured(X,Y,Z,A). [1,false]
+%#heuristic obs(X,Y,Z,A). [1,false]
+%#heuristic guessed(X,Y,Z,A). [1,false]
+
+#show formula/2.
+#show dnf/2.
+#show clause/3.

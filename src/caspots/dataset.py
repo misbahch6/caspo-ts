@@ -11,7 +11,7 @@ from clingo.symbol import Function, Number, String
 
 from .asputils import *
 from .utils import *
-
+from .crossvar import globalvariables
 
 class Experiment:
     def __init__(self, id):

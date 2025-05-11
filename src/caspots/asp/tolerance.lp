@@ -13,7 +13,7 @@
 
 %#show measured/4.
 %#show guessed/4.
-:-  not minErrors #sum {1,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S)} maxErrors.
+:- not minErrors #sum {1,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S)} maxErrors.
 :- not minWeight #sum {Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=50-M, M < 50;
                        Erg,E,T,S : measured(E,T,S,V), not guessed(E,T,S,V), toGuess(E,T,S), obs(E,T,S,M), Erg=M-49, M >= 50} maxWeight.
 

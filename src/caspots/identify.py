@@ -57,8 +57,7 @@ class SolverOptions:
     check_exact: bool = False
     factor: int = 100
 
-
-
+#--------------These are data processing functions-----------------
 def crunch_data(answer: Sequence[Symbol], predicate: str, factor: float) -> CrunchedData:
     """
     Process and organize data from Symbols into 'obs' and 'bin' categories.
@@ -129,11 +128,14 @@ def count_predicate(answer: Sequence[Symbol], predicate: str) -> int:
     print("I am in count_predicate")
 
     return sum(1 for a in answer if a.name == predicate)
+#---------------------------------------------------------------
 
-
+# -----------------ASPSample class is used to handle one solution-----------------
 class ASPSample:
     """
-    Represents a sample from an Answer Set Programming (ASP) solution.
+    Defines the ASPSample class and related helper functions 
+     for handling the output of Answer Set Programming (ASP) solvers 
+     in the context of Boolean network inference.
 
     Attributes:
         atoms: Sequence of Symbol objects representing atoms in the ASP model.
@@ -157,7 +159,8 @@ class ASPSample:
 
     def asp_exclusion(self) -> str:
         """
-        Generate ASP exclusion constraint based on current atoms.
+        Produces an ASP constraint to exclude the current solution 
+        from future searches (for solution enumeration).
 
         Returns:
             String representation of the ASP exclusion constraint.
@@ -180,8 +183,8 @@ class ASPSample:
 
     def mse(self) -> tuple[float, float]:
         """
-        Calculate Mean Squared Error for measured and guessed data.
-
+        Calculates the mean squared error (MSE) between 
+        observed and predicted (guessed) data in the sample.
         Returns:
             Tuple of (MSE for measured data, MSE for guessed data).
         """
@@ -195,7 +198,8 @@ class ASPSample:
 
     def network(self, hypergraph: HyperGraph) -> LogicalNetwork:
         """
-        Create a LogicalNetwork from the sample's atoms and given hypergraph.
+        Constructs a LogicalNetwork object from the sample, 
+        representing the inferred Boolean network.
 
         Args:
             hypergraph: Hypergraph object to use in network creation.
@@ -229,8 +233,9 @@ class ASPSample:
                     dataset.experiments[eid].obs[t][node] = value
         print("I am in trace")
         return dataset
+#---------------------------------------------------------------
 
-
+# -----------------ASPSolver class is used to solve ASP problems-----------------
 class ASPSolver:
     """
     A solver for Answer Set Programming (ASP) problems.
@@ -245,11 +250,11 @@ class ASPSolver:
 
     termset: funset
     data: str
-    opts: Any
+    opts: SolverOptions
     debug: bool
     domain: list[str]
 
-    def __init__(self, termset: funset, opts: Any, domain: str | None):
+    def __init__(self, termset: funset, opts: SolverOptions, domain: str | None):
         """
         Initialize the ASPSolver.
 
@@ -280,7 +285,6 @@ class ASPSolver:
             Configured Control object for ASP solving.
         """
         control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
-        control.add("base", [], "#show.")
         for f in self.domain:
             control.load(f)
         control.load(aspf("supportConsistency.lp"))
@@ -310,7 +314,6 @@ class ASPSolver:
                 f"#const minWeight={weight}. [override] #const maxWeight={weight}. [override]",
             )
 
-        control.load(aspf("showMeasured.lp"))
         if self.opts.family == "subset":
             control.load(aspf("minimizeSizeOnly.lp"))
         if first:
@@ -394,15 +397,9 @@ class ASPSolver:
 
         control.ground([("base", [])])
 
-        control.load(aspf("show.lp"))
-        control.ground([("show", [])])
-
-        # ****Flavio****
-
         start = time.time()
 
         if force_weight is None:
-            control.assign_external(Function("tolerance"), False)
             dbg("# start initial solving")
             opt = []
             control.solve(on_model=lambda model: opt.append(model.cost))
@@ -418,12 +415,12 @@ class ASPSolver:
                 for sample in self.solution_samples():
                     on_model_weight(sample)
                 return
-
-            control.assign_external(Function("tolerance"), True)
         else:
             weight = force_weight
             dbg(f"# force weight = {weight}")
 
+        # NOTE: maybe not set a lower bound for the weight
+        # TODO: can be added to the encoding with a parametrized program
         max_weight = weight + self.opts.weight_tolerance
         control.add(
             "minWeight",
@@ -443,9 +440,17 @@ class ASPSolver:
         assert isinstance(solver_opts, Configuration)
 
         solve_opts.opt_mode = "ignore"
-        solve_opts.project = 1  # ????
-        solve_opts.models = limit  # ????
-        # print control.conf.solver[0].keys()
+        solve_opts.models = limit
+        if do_subsets:
+            # this configures the heuristic to make shown atoms false 
+            # before assigning any other atoms
+            solver_opts.heuristic = "Domain"
+            solver_opts.dom_mod = "5,16"
+            # subset minimize on: dnf, clause, formula
+            solve_opts.enum_mode = "domRec"
+        else:
+            # project on shown atoms: dnf, clause, formula
+            solve_opts.project = 1
 
         if do_mincard:
             if self.opts.force_size:
@@ -459,13 +464,9 @@ class ASPSolver:
             )
             control.ground([("minSize", [])])
 
-        if do_subsets:
-            solve_opts.enum_mode = "domRec"
-            solver_opts.heuristic = "Domain"
-            solver_opts.dom_mod = "5,16"
-
         start = time.time()
         dbg("# begin enumeration")
         control.solve(on_model=on_model)
         dbg(f"# enumeration took {time.time() - start}")
         print("I am in solutions")
+#---------------------------------------

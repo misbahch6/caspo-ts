@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+from .crossvar import globalvariables
 import subprocess
 
 U_GENERAL = "general"
@@ -159,3 +159,31 @@ def verify(dataset, network, destfile, *args, **kwargs):
     output = subprocess.check_output(["NuSMV", "-coi", "-dcx", smvfile])
     ret = output.strip().split()[-1].decode()
     return ret == "true"
+
+def verify_parallel(dataset, network, destfile, *args, **kwargs):
+    smvfile = make_smv(dataset, network, destfile, *args, **kwargs)
+    
+    def ctl_of_exp(exp):
+        ts = list(sorted(exp.obs.keys()))
+        ctl = "(E%d_SETUP & E%d_T0) -> " % (exp.id, exp.id)
+        if ts[0] == 0:
+            t0 = ts.pop(0)
+            if not ts:
+                return "TRUE"
+        for t in ts:
+            ctl += "EF (E%d_T%d & " % (exp.id, t)
+        ctl = ctl[:-2] + ")" * len(ts)
+        return "(%s)" % ctl
+    
+    for exp in dataset.experiments.values():
+        if exp.id == 0:
+            smv = open(destfile, "a")
+            getexp = clt_of_exp(exp)
+            smv.write(getexp)
+            smv.write("\n);\n")
+            smv.close()
+        else:
+            smv = open(destfile, "rb")
+            pos = next = 0
+            for line in smv:
+                pos = next

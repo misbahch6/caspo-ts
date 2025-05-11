@@ -259,7 +259,7 @@ def do_diversify(args):
         mcounter = 1
         skip = False
         tuples = []
-        tuples = ([x.number for x in f.arguments] for f in model.symbols(shown=True) if f.name == "dnf" and len(f.arguments) == 2)
+        tuples = ([x.number for x in f.arguments] for f in model.symbols(atoms=True) if f.name == "dnf" and len(f.arguments) == 2)
         network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
         if args.true_positives:
             if is_true_positive(args, dataset, network):
