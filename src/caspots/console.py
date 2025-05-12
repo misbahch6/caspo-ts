@@ -180,6 +180,7 @@ def do_mse(args):
 
 def do_identify(args: identify.SolverOptions):
     print("I am in do_identify")
+    print("diversify", args.diversify)
 
     graph, hypergraph = read_pkn(args)
     dataset = read_dataset(args, graph)
@@ -209,73 +210,27 @@ def do_identify(args: identify.SolverOptions):
         c["found"] += 1
         skip = False
         tuples = []
-        for f in model.symbols(atoms=True):
-            if f.name == "dnf" and len(f.arguments) == 2:
-                tuples.append([arg.number for arg in f.arguments])
-        network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
-        if args.true_positives:
-            if is_true_positive(args, dataset, network):
-                c["tp"] += 1
-            else:
-                skip = True
-        show_stats()
-        if skip:
-            return
-        networks.append(network)
 
-    try:
-        identifier.solutions(on_model, limit=args.limit, force_weight=args.force_weight)
-    finally:
-        print("%d solution(s) for the over-approximation" % c["found"])
-        if args.true_positives and c["found"]:
-            print("%d/%d true positives [rate: %0.2f%%]" % (c["tp"], c["found"], (100.0 * c["tp"]) / c["found"]))
-        if networks:
-            networks.to_csv(args.output)
-        os.unlink(domainlp)
-
-
-def do_diversify(args):
-    graph, hypergraph = read_pkn(args)
-    dataset = read_dataset(args, graph)
-    termset = funset(hypergraph, dataset)
-
-    fd, domainlp = tempfile.mkstemp(".lp")
-    os.close(fd)
-    domain = read_domain(args, hypergraph, dataset, domainlp)
-
-    identifier = identify.ASPSolver(termset, args, domain=domain)
-
-    networks = LogicalNetworkList.from_hypergraph(hypergraph)
-
-    c = {
-        "found": 0,
-        "tp": 0,
-    }
-
-    def show_stats(output=sys.stderr):
-        if args.true_positives:
-            output.write("%d solution(s) / %d true positives\r" % (c["found"], c["tp"]))
+        if args.diversify:
+            globalvariables.numberofsol = args.limit
+            globalvariables.check = False
+            mcounter = 1
+            tuples = (
+                [x.number for x in f.arguments]
+                for f in model.symbols(atoms=True)
+                if f.name == "dnf" and len(f.arguments) == 2
+            )
+            network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
         else:
-            output.write("%d solution(s)\r" % c["found"])
-        output.flush()
-
-    def on_model(model: Model):
-        globalvariables.numberofsol = args.limit
-        globalvariables.check = False
-        c["found"] += 1
-        mcounter = 1
-        skip = False
-        tuples = []
-        tuples = (
-            [x.number for x in f.arguments]
-            for f in model.symbols(atoms=True)
-            if f.name == "dnf" and len(f.arguments) == 2
-        )
-        network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
+            for f in model.symbols(atoms=True):
+                if f.name == "dnf" and len(f.arguments) == 2:
+                    tuples.append([arg.number for arg in f.arguments])
+            network = LogicalNetwork.from_hypertuples(hypergraph, tuples)
         if args.true_positives:
             if is_true_positive(args, dataset, network):
-                globalvariables.check = True
                 c["tp"] += 1
+                if args.diversify:
+                    globalvariables.check = True
             else:
                 skip = True
         show_stats()
@@ -355,20 +310,7 @@ def run():
     p_identify.add_argument("--range-length", type=int, default=0)
     p_identify.add_argument("--networks", default=None)
     p_identify.add_argument("--factor", type=int, default=100)
-
-    # diversify
-    p_diversify = subparsers.add_parser("diversify", help="Diversify Boolean networks")
-    p_diversify.add_argument("pkn")
-    p_diversify.add_argument("dataset")
-    p_diversify.add_argument("output")
-    p_diversify.add_argument("--diversify", type=int, default=0)
-    p_diversify.add_argument("--true-positives", action="store_true", default=False)
-    p_diversify.add_argument("--limit", type=int, default=0)
-    p_diversify.add_argument("--semantics", default="u_general")
-    p_diversify.add_argument("--range-from", type=int, default=0)
-    p_diversify.add_argument("--range-length", type=int, default=0)
-    p_diversify.add_argument("--networks", default=None)
-    p_diversify.add_argument("--factor", type=int, default=100)
+    p_identify.add_argument("--diversify", type=bool, default=False)
 
     # validate
     p_validate = subparsers.add_parser("validate", help="Validate networks")
@@ -423,6 +365,7 @@ def run():
     p_results2lp.add_argument("--range-length", type=int, default=0)
 
     ns = parser.parse_args()
+    print(ns)
 
     def from_namespace(cls, ns):
         # Get dataclass field names
@@ -433,7 +376,6 @@ def run():
 
     dispatch = {
         "identify": (do_identify, identify.SolverOptions),
-        "diversify": (do_diversify, identify.SolverOptions),
         "validate": (do_validate, ValidateArgs),
         "mse": (do_mse, identify.SolverOptions),
         "pkn2lp": (do_pkn2lp, PKN2LPArgs),

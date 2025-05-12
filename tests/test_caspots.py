@@ -1,13 +1,14 @@
 """
 Basic tests for caspots.
 """
-from dataclasses import dataclass
+
 import math
 import os
-from pathlib import Path
 import sys
 import tempfile
 import time
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Optional
 
 from caspo.core import Graph, HyperGraph, LogicalNetwork, LogicalNetworkList
@@ -15,11 +16,13 @@ from clingo import Model
 
 from caspots import identify
 from caspots.asputils import funset
-from caspots.console import is_true_positive, read_domain, read_networks, read_pkn, read_dataset
+from caspots.console import is_true_positive, read_dataset, read_domain, read_networks, read_pkn
 from caspots.identify import ASPSolver
+
 
 class Args:
     pass
+
 
 @dataclass
 class Config:
@@ -40,6 +43,8 @@ class Config:
     range_from: int = 0
     range_lenth: int = 0
     semantics: str = "general"
+    diversify: bool = False
+
 
 class TestCaspots:
     """
@@ -56,7 +61,6 @@ class TestCaspots:
         dataset = read_dataset(args, graph)
         networks = read_networks(args)
         return graph, hypergraph, dataset, networks
-
 
     def test_dataset(self):
         """
@@ -107,11 +111,11 @@ class TestCaspots:
         finally:
             if os.path.exists(domainlp):
                 os.unlink(domainlp)
-    
+
     def test_mse(self):
         """
         Test MSE.
-        """ 
+        """
         graph, hypergraph, dataset, networks = self.read_inputs()
         termset = funset(hypergraph, dataset)
 
@@ -130,7 +134,7 @@ class TestCaspots:
             # Ensure the temporary file is always deleted
             if os.path.exists(domainlp):
                 os.unlink(domainlp)
-    
+
     def test_validate(self):
         """
         Test validate.
@@ -143,4 +147,3 @@ class TestCaspots:
             if is_true_positive(args, dataset, network):
                 tp += 1
         assert tp == 54
-

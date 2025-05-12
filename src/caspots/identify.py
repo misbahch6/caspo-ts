@@ -18,7 +18,7 @@ from typing import Callable, Iterator, Literal, Sequence
 
 from caspo.core import Dataset, LogicalNetwork
 from caspo.core.hypergraph import HyperGraph
-from clingo import Configuration, Number
+from clingo import Configuration, Function, Number
 from clingo.control import Control
 from clingo.solving import Model
 from clingo.symbol import Symbol
@@ -50,7 +50,7 @@ class SolverOptions:
     range_from: int = 0
     range_length: int = 0
     networks: str | None = None
-    diversify: int = 0
+    diversify: bool = False
     check_exact: bool = False
     factor: int = 100
 
@@ -283,7 +283,11 @@ class ASPSolver:
         Returns:
             Configured Control object for ASP solving.
         """
-        control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
+        print(self.opts.diversify)
+        if not self.opts.diversify:
+            control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
+        else:
+            control = Control(["--stats", "--opt-strat=usc"] + list(args))
         control.load(aspf("encoding.lp"))
         parts: list[tuple[str, list[Symbol]]] = [("base", [])]
         if self.domain is None:
@@ -309,7 +313,10 @@ class ASPSolver:
         Returns:
             A sample solution or None if no solution found.
         """
-        control, parts = self.default_control()
+        if not self.opts.diversify:
+            control, parts = self.default_control()
+        else:
+            control, parts = self.default_control("--no-ufs-check")
         if weight is not None:
             parts.append(("fix_weight", [Number(weight), Number(weight)]))
 
@@ -318,12 +325,15 @@ class ASPSolver:
         if first:
             parts.append(("minimize_weight", []))
         for f in scripts:
+            print(f)
             control.load(f)
         control.ground(parts)
         with control.solve(yield_=True) as hnd:
             for model in hnd:
                 return ASPSample(self.opts, model)
         print("I am in sample")
+        print(first)
+        print("hello")
 
         return None
 
@@ -363,7 +373,8 @@ class ASPSolver:
             else:
                 print("# Enumeration complete")
                 break
-        os.unlink(excludelp)
+        if not self.opts.diversify:
+            os.unlink(excludelp)
 
     def solutions(
         self,
@@ -430,22 +441,66 @@ class ASPSolver:
 
         solve_opts.opt_mode = "ignore"
         solve_opts.models = limit
-        if do_subsets:
-            # this configures the heuristic to make shown atoms false
-            # before assigning any other atoms
-            solver_opts.heuristic = "Domain"
-            solver_opts.dom_mod = "5,16"
-            # subset minimize on: dnf, clause, formula
-            solve_opts.enum_mode = "domRec"
+        if not self.opts.diversify:
+            print("I am in solutions")
+            if do_subsets:
+                # this configures the heuristic to make shown atoms false
+                # before assigning any other atoms
+                solver_opts.heuristic = "Domain"
+                solver_opts.dom_mod = "5,16"
+                # subset minimize on: dnf, clause, formula
+                solve_opts.enum_mode = "domRec"
+            else:
+                # project on shown atoms: dnf, clause, formula
+                solve_opts.project = 1
+            start = time.time()
+            dbg("# begin enumeration")
+            control.solve(on_model=on_model)
+            dbg(f"# enumeration took {time.time() - start}")
+            print("I am in solutions")
         else:
-            # project on shown atoms: dnf, clause, formula
-            solve_opts.project = 1
+            print("I am in solutions with diversity")
+            control.configuration.solver[0].heuristic = "Domain"
 
-        start = time.time()
-        dbg("# begin enumeration")
-        control.solve(on_model=on_model)
-        dbg(f"# enumeration took {time.time() - start}")
-        print("I am in solutions")
+            class Context:
+                def __init__(self):
+                    self.dnf_args = []
+                    self.ndnf_args = []
 
+                def dnf(self):
+                    return self.dnf_args
 
-# ---------------------------------------
+                def ndnf(self):
+                    return self.ndnf_args
+
+            ctx = Context()
+            start = time.time()
+            dbg("# begin enumeration")
+            parts.append(("diversity", []))
+            control.ground(parts, ctx)
+            models = 0
+            while True:
+                atoms, natoms = [], []
+                with control.solve(yield_=True) as solutions:
+                    for model in solutions:
+                        atoms = model.symbols(atoms=True)
+                        natoms = model.symbols(atoms=True, complement=True)
+                        on_model(model)
+                        break
+                    else:
+                        break
+                ctx.dnf_args = []
+                for atom in atoms:
+                    n, a = atom.name, atom.arguments
+                    if n == "dnf" and len(a) == 2:
+                        control.assign_external(Function("before", a), True)
+                        ctx.dnf_args.append(Function("", a))
+                for atom in natoms:
+                    n, a = atom.name, atom.arguments
+                    if n == "dnf" and len(a) == 2:
+                        control.assign_external(Function("before", a), False)
+                # print(ctx.dnf_args)
+                parts.append(("block_solution", []))
+                control.ground(parts, ctx)
+                models += 1
+            dbg("# enumeration took %s" % (time.time() - start))
