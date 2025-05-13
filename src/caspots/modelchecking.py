@@ -1,6 +1,7 @@
 #!/usr/bin/env python
-from .crossvar import globalvariables
 import subprocess
+
+from .crossvar import globalvariables
 
 U_GENERAL = "general"
 U_ASYNC = "asynchronous"
@@ -133,36 +134,15 @@ def make_smv(dataset, network, destfile, update: str = U_GENERAL):
     for n in varying_nodes:
         smv.write(" & !u_%s" % n)
     smv.write(");\n")
-
-    def ctl_of_exp(exp):
-        ts = list(sorted(exp.obs.keys()))
-        ctl = "(E%d_SETUP & E%d_T0) -> " % (exp.id, exp.id)
-        if ts[0] == 0:
-            t0 = ts.pop(0)
-            if not ts:
-                return "TRUE"
-        for t in ts:
-            ctl += "EF (E%d_T%d & " % (exp.id, t)
-        ctl = ctl[:-2] + ")" * len(ts)
-        return "(%s)" % ctl
-
-    smv.write("\nSPEC (\n  ")
-    smv.write("\n& ".join([ctl_of_exp(exp) for exp in dataset.experiments.values()]))
-    smv.write("\n);\n")
-    smv.write("\n")
     smv.close()
     return destfile
 
 
 def verify(dataset, network, destfile, *args, **kwargs):
     smvfile = make_smv(dataset, network, destfile, *args, **kwargs)
-    output = subprocess.check_output(["NuSMV", "-coi", "-dcx", smvfile])
-    ret = output.strip().split()[-1].decode()
-    return ret == "true"
 
-def verify_parallel(dataset, network, destfile, *args, **kwargs):
-    smvfile = make_smv(dataset, network, destfile, *args, **kwargs)
-    
+    # for exp in dataset.experiments.values():
+    # print("Processing experiment:", exp.id)
     def ctl_of_exp(exp):
         ts = list(sorted(exp.obs.keys()))
         ctl = "(E%d_SETUP & E%d_T0) -> " % (exp.id, exp.id)
@@ -174,16 +154,44 @@ def verify_parallel(dataset, network, destfile, *args, **kwargs):
             ctl += "EF (E%d_T%d & " % (exp.id, t)
         ctl = ctl[:-2] + ")" * len(ts)
         return "(%s)" % ctl
-    
+
+    wrote_expr0 = False
     for exp in dataset.experiments.values():
-        if exp.id == 0:
+        if exp.id == 0 and not wrote_expr0:
+            wrote_expr0 = True
             smv = open(destfile, "a")
-            getexp = clt_of_exp(exp)
-            smv.write(getexp)
+            # print("Writing expr", exp.id)
+            getexpr = ctl_of_exp(exp)
+            # print("getexpr", getexpr)
+            smv.write("\nSPEC (\n  ")
+            smv.write(getexpr)
             smv.write("\n);\n")
             smv.close()
-        else:
+            # with open(destfile, "r") as src, open("example-parallel.txt", "w") as dst:
+            # dst.write(src.read())
+        if exp.id != 0:
+            # print("Writing expr", exp.id)
+
             smv = open(destfile, "rb")
             pos = next = 0
             for line in smv:
-                pos = next
+                pos = next  # position of beginning of this line
+                next += len(line)  # compute position of beginning of next line
+            smv = open(destfile, "a")
+            smv.truncate(pos)
+            getexpr = ctl_of_exp(exp)
+            smv.write("\n& " + getexpr)
+            smv.write("\n);\n")
+            smv.close()
+        # with open(destfile, "r") as src, open("example-parallel.txt", "w") as dst:
+        # dst.write(src.read())
+        output = subprocess.check_output(["NuSMV", "-coi", "-dcx", smvfile])
+        ret = output.strip().split()[-1].decode()
+        if ret == "true":
+            # print("The experiment %d is satisfiable" % exp.id)
+            continue
+        else:
+            globalvariables.contraintonexp = exp.id
+            # print("The experiment %d is not satisfiable" % exp.id)
+            break
+    return ret == "true"
