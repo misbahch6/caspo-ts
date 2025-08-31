@@ -1,0 +1,506 @@
+"""
+This module is provides functions to compute Boolean networks using Answer Set
+Programming (ASP). It includes utilities for data processing, error
+calculation, and ASP-based problem solving.
+
+- Processes ASP solution data into structured formats.
+- Calculates Mean Squared Error (MSE) between observed and guessed data.
+- Manages ASP samples and constructs logical networks.
+- Runs an ASP solver to generate and iterate over solutions.
+"""
+
+import math
+import os
+import tempfile
+import time
+from dataclasses import dataclass
+from typing import Callable, Iterator, Literal, Sequence
+
+from caspo.core import Dataset, LogicalNetwork
+from caspo.core.hypergraph import HyperGraph
+from clingo import Configuration, Function, Number
+from clingo.control import Control
+from clingo.solving import Model
+from clingo.symbol import Symbol
+
+from .asputils import funset
+from .config import aspf
+from .utils import dbg
+
+CrunchedData = tuple[set[tuple[Symbol]], dict[str, dict[tuple[Symbol], float]]]
+
+
+@dataclass
+class SolverOptions:
+    pkn: str
+    dataset: str
+    output: str | None = None
+    family: Literal["all", "subset", "mincard"] = "subset"
+    mincard_tolerance: int = 0
+    weight_tolerance: int = 0
+    enum_traces: bool = False
+    fully_controllable: bool = True
+    force_weight: int | None = None
+    force_size: int | None = None
+    debug: bool = False
+    RC: int | None = None
+    true_positives: bool = False
+    limit: int = 0
+    semantics: str = "u_general"
+    range_from: int = 0
+    range_length: int = 0
+    networks: str | None = None
+    diversify: bool = False
+    check_exact: bool = False
+    factor: int = 100
+
+
+# --------------These are data processing functions-----------------
+def crunch_data(answer: Sequence[Symbol], predicate: str, factor: float) -> CrunchedData:
+    """
+    Process and organize data from Symbols into 'obs' and 'bin' categories.
+
+    Args:
+        answer: Sequence of Symbol objects to process.
+        predicate: String specifying the predicate for binary data.
+        factor: Float value to scale 'obs' data.
+
+    Returns:
+        Tuple containing a set of unique keys and a dictionary of processed
+        data.
+    """
+    factor = float(factor)
+    data = {"obs": {}, "bin": {}}
+    keys = set()
+    for a in answer:
+        p = a.name
+        if p in ["obs", predicate]:
+            args = a.arguments
+            key = tuple(args[:3])
+            val = float(args[3].number)
+            if p == "obs":
+                val /= factor
+            t = "obs" if p == "obs" else "bin"
+            data[t][key] = val
+            keys.add(key)
+    print("I am in crunch_data")
+
+    return keys, data
+
+
+def calculate_mse(cd: CrunchedData) -> float:
+    """
+    Calculate the Mean Squared Error (MSE) from CrunchedData.
+
+    Args:
+        cd: CrunchedData containing processed observation and binary data.
+
+    Returns:
+        Float value representing the square root of the average squared
+        difference between 'obs' and 'bin' data.
+    """
+    cum = 0
+    keys, data = cd
+    n = 0
+    for key in keys:
+        if key not in data["obs"]:
+            continue
+        n += 1
+        cum += (data["obs"][key] - data["bin"][key]) ** 2
+    print("I am in calculate_mse")
+
+    return math.sqrt(cum / n)
+
+
+def count_predicate(answer: Sequence[Symbol], predicate: str) -> int:
+    """
+    Count occurrences of a specific predicate in a sequence of Symbols.
+
+    Args:
+        answer: Sequence of Symbol objects to search.
+        predicate: String representing the predicate to count.
+
+    Returns:
+        Number of Symbols with matching predicate name.
+    """
+    print("I am in count_predicate")
+
+    return sum(1 for a in answer if a.name == predicate)
+
+
+# ---------------------------------------------------------------
+
+
+# -----------------ASPSample class is used to handle one solution-----------------
+class ASPSample:
+    """
+    Defines the ASPSample class and related helper functions
+     for handling the output of Answer Set Programming (ASP) solvers
+     in the context of Boolean network inference.
+
+    Attributes:
+        atoms: Sequence of Symbol objects representing atoms in the ASP model.
+        optimization: Sequence of integers representing optimization values.
+    """
+
+    atoms: Sequence[Symbol]
+    optimization: Sequence[int]
+
+    def __init__(self, opts: SolverOptions, model: Model):
+        """
+        Initialize ASPSample with options and ASP model.
+
+        Args:
+            opts: Options object containing configuration settings.
+            model: ASP model object.
+        """
+        self.opts = opts
+        self.atoms = model.symbols(atoms=True)
+        self.optimization = model.cost
+
+    def asp_exclusion(self) -> str:
+        """
+        Produces an ASP constraint to exclude the current solution
+        from future searches (for solution enumeration).
+
+        Returns:
+            String representation of the ASP exclusion constraint.
+        """
+        predicates = ["formula", "dnf", "clause"]
+        if self.opts.enum_traces:
+            predicates += ["guessed"]
+        clauses = [a for a in self.atoms if a.name in predicates]
+        if self.opts.family == "all":
+            nb_formula = count_predicate(self.atoms, "formula")
+            nb_dnf = count_predicate(self.atoms, "dnf")
+            nb_clause = count_predicate(self.atoms, "clause")
+            clauses += [
+                "%d{formula(V,I): node(V,I)}%d" % (nb_formula, nb_formula),
+                "%d{dnf(I,J): hyper(I,J,N)}%d" % (nb_dnf, nb_dnf),
+                "%d{clause(J,V,B): edge(J,V,B)}%d" % (nb_clause, nb_clause),
+            ]
+        print("I am in asp_exclusion")
+        return f":- {', '.join(map(str, clauses))}."
+
+    def mse(self) -> tuple[float, float]:
+        """
+        Calculates the mean squared error (MSE) between
+        observed and predicted (guessed) data in the sample.
+        Returns:
+            Tuple of (MSE for measured data, MSE for guessed data).
+        """
+        cd_measured = crunch_data(self.atoms, "measured", self.opts.factor)
+        cd_guessed = crunch_data(self.atoms, "guessed", self.opts.factor)
+        mse0 = calculate_mse(cd_measured)
+        mse = calculate_mse(cd_guessed)
+        print("I am in mse")
+
+        return (mse0, mse)
+
+    def network(self, hypergraph: HyperGraph) -> LogicalNetwork:
+        """
+        Constructs a LogicalNetwork object from the sample,
+        representing the inferred Boolean network.
+
+        Args:
+            hypergraph: Hypergraph object to use in network creation.
+
+        Returns:
+            LogicalNetwork object constructed from the sample's atoms.
+        """
+        print("I am in network")
+
+        tuples = (tuple(arg.number for arg in f.arguments) for f in self.atoms if f.match("dnf", 2))
+        return LogicalNetwork.from_hypertuples(hypergraph, tuples)
+
+    def trace(self, dataset: Dataset) -> Dataset:
+        """
+        Update the given dataset using the 'guessed' predicates from the sample.
+
+        Args:
+            dataset: Dataset object to be updated.
+
+        Returns:
+            Updated dataset with modifications based on 'guessed' predicates.
+        """
+        # rewrite dataset using guessed predicate
+        for a in self.atoms:
+            if a.name == "guessed":
+                eid, t, node, value = a.arguments
+                if node not in dataset.readout:
+                    continue
+                if dataset.experiments[eid].obs[t][node] != value:
+                    # print(((eid,t,node),dataset.experiments[eid].obs[t][node], value), file=sys.stderr)
+                    dataset.experiments[eid].obs[t][node] = value
+        print("I am in trace")
+        return dataset
+
+
+# ---------------------------------------------------------------
+
+
+# -----------------ASPSolver class is used to solve ASP problems-----------------
+class ASPSolver:
+    """
+    A solver for Answer Set Programming (ASP) problems.
+
+    Attributes:
+        termset: Set of terms for the ASP problem.
+        data: String representation of the termset.
+        opts: Options for the solver.
+        debug: Flag for debug mode.
+        domain: List of domain files for the ASP problem.
+    """
+
+    termset: funset
+    data: str
+    opts: SolverOptions
+    debug: bool
+    domain: str | None
+
+    def __init__(self, termset: funset, opts: SolverOptions, domain: str | None):
+        """
+        Initialize the ASPSolver.
+
+        Args:
+            termset: Set of terms for the ASP problem.
+            opts: Options for the solver.
+            domain: Domain file or None for default domain.
+        """
+        self.termset = termset
+        self.data = termset.to_str()
+        self.opts = opts
+        self.debug = opts.debug
+        self.domain = domain
+
+    def default_control(self, *args: str) -> tuple[Control, list[tuple[str, list[Symbol]]]]:
+        """
+        Create a default Control object for ASP solving.
+
+        Args:
+            *args: Additional arguments for the Control object.
+
+        Returns:
+            Configured Control object for ASP solving.
+        """
+        print(self.opts.diversify)
+        if not self.opts.diversify:
+            control = Control(["--conf=trendy", "--stats", "--opt-strat=usc"] + list(args))
+        else:
+            control = Control(["--stats", "--opt-strat=usc"] + list(args))
+        control.load(aspf("encoding.lp"))
+        parts: list[tuple[str, list[Symbol]]] = [("base", [])]
+        if self.domain is None:
+            parts.append(("guess_bn", []))
+            if self.opts.fully_controllable:
+                parts.append(("guess_bn_controllable", []))
+        else:
+            control.load(self.domain)
+
+        control.add("base", [], self.data)
+        print("I am in default_control")
+        return control, parts
+
+    def sample(self, first: bool, scripts: Sequence[str] = (), weight: int | None = None) -> ASPSample | None:
+        """
+        Generate a sample solution for the ASP problem.
+
+        Args:
+            first: If True, use weight minimization.
+            scripts: Additional script files to load.
+            weight: Specific weight to use.
+
+        Returns:
+            A sample solution or None if no solution found.
+        """
+        if not self.opts.diversify:
+            control, parts = self.default_control()
+        else:
+            control, parts = self.default_control("--no-ufs-check")
+        if weight is not None:
+            parts.append(("fix_weight", [Number(weight), Number(weight)]))
+
+        if self.opts.family == "subset":
+            parts.append(("minimize_size", []))
+        if first:
+            parts.append(("minimize_weight", []))
+        for f in scripts:
+            print(f)
+            control.load(f)
+        control.ground(parts)
+        with control.solve(yield_=True) as hnd:
+            for model in hnd:
+                return ASPSample(self.opts, model)
+        print("I am in sample")
+        print(first)
+        print("hello")
+
+        return None
+
+    def solution_samples(self) -> Iterator[ASPSample]:
+        """
+        An iterator for solution samples.
+
+        Yields:
+            Solution samples for the ASP problem.
+        """
+        i = 1
+        print("# I am in solution_samples")
+        if self.debug:
+            dbg(f"# model {i}")
+        s = self.sample(True)
+        if s is None:
+            return
+        yield s
+
+        weight = s.optimization[0]
+        fd, excludelp = tempfile.mkstemp(".lp")
+        os.close(fd)
+
+        with open(excludelp, "w", encoding="utf-8") as f:
+            f.write(f"{s.asp_exclusion()}\n")
+
+        args = [excludelp]
+        while True:
+            s = self.sample(False, args, weight=weight)
+            if s:
+                i += 1
+                if self.debug:
+                    dbg(f"# model {i}")
+                yield s
+                with open(excludelp, "a", encoding="utf-8") as f:
+                    f.write(f"{s.asp_exclusion()}")
+            else:
+                print("# Enumeration complete")
+                break
+        if not self.opts.diversify:
+            os.unlink(excludelp)
+
+    def solutions(
+        self,
+        on_model: Callable[[Model], bool | None],
+        on_model_weight: Callable[[ASPSample], None] | None = None,
+        limit: int = 0,
+        force_weight: int | None = None,
+    ) -> None:
+        """
+        Find solutions for the ASP problem.
+
+        Args:
+            on_model: Callback for each model found.
+            on_model_weight: Callback for weight-based models.
+            limit: Maximum number of models to find.
+            force_weight: Force a specific weight for solutions.
+        """
+        control, parts = self.default_control("0")
+
+        do_mincard = self.opts.family == "mincard" or self.opts.force_size is not None
+        do_subsets = self.opts.family == "subset" or (self.opts.family == "mincard" and self.opts.mincard_tolerance)
+
+        parts.append(("minimize_weight", []))
+        if do_mincard:
+            parts.append(("minimize_size", []))
+
+        start = time.time()
+
+        def maxsize(size):
+            if self.opts.force_size:
+                return self.opts.force_size
+            return size + self.opts.mincard_tolerance
+
+        if force_weight is not None:
+            parts.append(("fix_weight", [Number(force_weight), Number(force_weight)]))
+            if do_mincard:
+                parts.append(("fix_size", [Number(force_weight), Number(maxsize(force_weight))]))
+        control.ground(parts)
+
+        if force_weight is None:
+            dbg("# start initial solving")
+            opt = []
+            control.solve(on_model=lambda model: opt.append(model.cost))
+            dbg(f"# initial solve took {time.time() - start}")
+
+            optimizations = opt.pop()
+            dbg(f"# optimizations = {optimizations}")
+
+            weight = optimizations[0]
+            if weight > 0 and on_model_weight is not None:
+                for sample in self.solution_samples():
+                    on_model_weight(sample)
+                return
+
+            parts = [("fix_weight", [Number(weight), Number(weight + self.opts.weight_tolerance)])]
+            if do_mincard:
+                parts.append(("fix_size", [Number(optimizations[1]), Number(maxsize(optimizations[1]))]))
+            control.ground(parts)
+
+        solve_opts = control.configuration.solve
+        solver_opts = control.configuration.solver
+        assert isinstance(solve_opts, Configuration)
+        assert isinstance(solver_opts, Configuration)
+
+        solve_opts.opt_mode = "ignore"
+        solve_opts.models = limit
+        if not self.opts.diversify:
+            print("I am in solutions")
+            if do_subsets:
+                # this configures the heuristic to make shown atoms false
+                # before assigning any other atoms
+                solver_opts.heuristic = "Domain"
+                solver_opts.dom_mod = "5,16"
+                # subset minimize on: dnf, clause, formula
+                solve_opts.enum_mode = "domRec"
+            else:
+                # project on shown atoms: dnf, clause, formula
+                solve_opts.project = 1
+            start = time.time()
+            dbg("# begin enumeration")
+            control.solve(on_model=on_model)
+            dbg(f"# enumeration took {time.time() - start}")
+            print("I am in solutions")
+        else:
+            print("I am in solutions with diversity")
+            control.configuration.solver[0].heuristic = "Domain"
+
+            class Context:
+                def __init__(self):
+                    self.dnf_args = []
+                    self.ndnf_args = []
+
+                def dnf(self):
+                    return self.dnf_args
+
+                def ndnf(self):
+                    return self.ndnf_args
+
+            ctx = Context()
+            start = time.time()
+            dbg("# begin enumeration")
+            parts.append(("diversity", []))
+            control.ground(parts, ctx)
+            models = 0
+            while True:
+                atoms, natoms = [], []
+                with control.solve(yield_=True) as solutions:
+                    for model in solutions:
+                        atoms = model.symbols(atoms=True)
+                        natoms = model.symbols(atoms=True, complement=True)
+                        on_model(model)
+                        break
+                    else:
+                        break
+                ctx.dnf_args = []
+                for atom in atoms:
+                    n, a = atom.name, atom.arguments
+                    if n == "dnf" and len(a) == 2:
+                        control.assign_external(Function("before", a), True)
+                        ctx.dnf_args.append(Function("", a))
+                for atom in natoms:
+                    n, a = atom.name, atom.arguments
+                    if n == "dnf" and len(a) == 2:
+                        control.assign_external(Function("before", a), False)
+                # print(ctx.dnf_args)
+                parts.append(("block_solution", []))
+                control.ground(parts, ctx)
+                models += 1
+            dbg("# enumeration took %s" % (time.time() - start))
